@@ -56,28 +56,289 @@ SQLite at `app/data/database/tevila.db`.
 
 APScheduler runs every minute (`cron minute='*'`). For each relay, it checks if the current time falls within any schedule entry for that relay and day. If yes, turns relay ON. If no, turns relay OFF. Special dates in the Dates table override the weekday and use the "Holiday" schedule instead.
 
-## API Endpoints
+## API Reference
 
-All protected endpoints require `Authorization: Bearer <token>` header.
-Token: `FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX`
+**Base URL**: `http://<raspberry-pi-ip>:5000`
 
-### Relay Control
-- `POST /relay/on` — `{"relay": "heating"|"filtering"}` — Turn relay on
-- `POST /relay/off` — `{"relay": "heating"|"filtering"}` — Turn relay off
-- `POST /relay/status` — `{"relay": "heating"|"filtering"}` — Check relay state
+### Authentication
 
-### Status
-- `GET /api/status` — System status with both relay states
+All endpoints (except `GET /`) require a Bearer token in the `Authorization` header.
 
-### Schedule Management
-- `POST /hours` — Get all hours (optional `{"relay": "heating"}` to filter)
-- `POST /add_hours` — `{"relay": "heating", "day": "Monday", "start_time": "09:00", "end_time": "17:00"}`
-- `POST /delete_hours` — `{"hour_id": 1}`
+```
+Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX
+```
 
-### Special Dates
-- `GET /dates` — Get all special dates
-- `POST /add_date` — `{"date": "2026-01-01"}`
-- `POST /delete_date` — `{"date_id": 1}`
+**Error responses when auth fails:**
+- Missing token: `401 {"message": "No token provided"}`
+- Invalid token: `401 {"message": "Invalid token"}`
+
+---
+
+### `GET /`
+
+Returns the web UI (no auth required).
+
+---
+
+### `GET /api/status`
+
+Get system status and both relay states.
+
+**Request:**
+```bash
+curl -X GET http://localhost:5000/api/status \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX"
+```
+
+**Response:**
+```json
+{
+  "status": "online",
+  "time": "2026-03-25 17:34:00",
+  "heating": "on",
+  "filtering": "off"
+}
+```
+
+---
+
+### `POST /relay/on`
+
+Turn a relay ON.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/relay/on \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"relay": "heating"}'
+```
+
+**Body:** `{"relay": "heating"}` or `{"relay": "filtering"}`
+
+**Response:**
+```json
+{"success": true, "relay": "heating", "state": "on"}
+```
+
+**Errors:**
+- `400` — Unknown relay name
+
+---
+
+### `POST /relay/off`
+
+Turn a relay OFF.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/relay/off \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"relay": "filtering"}'
+```
+
+**Body:** `{"relay": "heating"}` or `{"relay": "filtering"}`
+
+**Response:**
+```json
+{"success": true, "relay": "filtering", "state": "off"}
+```
+
+---
+
+### `POST /relay/status`
+
+Check a single relay's current state.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/relay/status \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"relay": "heating"}'
+```
+
+**Body:** `{"relay": "heating"}` or `{"relay": "filtering"}`
+
+**Response:**
+```json
+{"relay": "heating", "state": "off"}
+```
+
+---
+
+### `POST /hours`
+
+Get schedule entries. Send empty body `{}` for all, or filter by relay.
+
+**Request (all schedules):**
+```bash
+curl -X POST http://localhost:5000/hours \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Request (filter by relay):**
+```bash
+curl -X POST http://localhost:5000/hours \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"relay": "heating"}'
+```
+
+**Response:**
+```json
+{
+  "hours": [
+    {
+      "id": 1,
+      "relay": "heating",
+      "day": "Monday",
+      "start_time": "09:00",
+      "end_time": "17:00"
+    },
+    {
+      "id": 2,
+      "relay": "filtering",
+      "day": "Monday",
+      "start_time": "08:00",
+      "end_time": "20:00"
+    }
+  ]
+}
+```
+
+Results are sorted by relay, then day (Monday-Sunday, Holiday), then start_time.
+
+---
+
+### `POST /add_hours`
+
+Add a schedule entry for a relay.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/add_hours \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"relay": "heating", "day": "Monday", "start_time": "09:00", "end_time": "17:00"}'
+```
+
+**Body:**
+| Field | Required | Values |
+|-------|----------|--------|
+| `relay` | yes | `"heating"` or `"filtering"` |
+| `day` | yes | `"Monday"`, `"Tuesday"`, `"Wednesday"`, `"Thursday"`, `"Friday"`, `"Saturday"`, `"Sunday"`, `"Holiday"` |
+| `start_time` | yes | `"HH:MM"` or `"HH:MM:SS"` |
+| `end_time` | yes | `"HH:MM"` or `"HH:MM:SS"` |
+
+**Response:**
+```json
+{
+  "success": true,
+  "hours": {
+    "id": 1,
+    "relay": "heating",
+    "day": "Monday",
+    "start_time": "09:00",
+    "end_time": "17:00"
+  }
+}
+```
+
+**Errors:**
+- `400` — Missing required fields
+- `400` — Unknown relay name
+
+---
+
+### `POST /delete_hours`
+
+Delete a schedule entry by ID.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/delete_hours \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"hour_id": 1}'
+```
+
+**Response:**
+```json
+{"success": true, "message": "Hours with ID 1 deleted"}
+```
+
+**Errors:**
+- `404` — No hours found with that ID
+
+---
+
+### `GET /dates`
+
+Get all special dates (holidays).
+
+**Request:**
+```bash
+curl -X GET http://localhost:5000/dates \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX"
+```
+
+**Response:**
+```json
+{
+  "dates": [
+    {"id": 1, "date": "2026-04-01"},
+    {"id": 2, "date": "2026-12-25"}
+  ]
+}
+```
+
+---
+
+### `POST /add_date`
+
+Add a special date. If the date already exists, returns the existing entry.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/add_date \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"date": "2026-04-01"}'
+```
+
+**Response:**
+```json
+{"success": true, "date": {"id": 1, "date": "2026-04-01"}}
+```
+
+**Errors:**
+- `400` — Missing date field
+
+---
+
+### `POST /delete_date`
+
+Delete a special date by ID.
+
+**Request:**
+```bash
+curl -X POST http://localhost:5000/delete_date \
+  -H "Authorization: Bearer FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX" \
+  -H "Content-Type: application/json" \
+  -d '{"date_id": 1}'
+```
+
+**Response:**
+```json
+{"success": true, "message": "Date with ID 1 deleted"}
+```
+
+**Errors:**
+- `404` — No date found with that ID
 
 ## Web UI
 
