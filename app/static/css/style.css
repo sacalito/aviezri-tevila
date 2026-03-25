@@ -1,0 +1,153 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 5px;
+}
+
+.status-card, .control-panel, .schedule-panel {
+    background-color: white;
+    border-radius: 5px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-btn {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+#open-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+#close-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.action-btn:hover {
+    opacity: 0.9;
+}
+
+footer {
+    text-align: center;
+    margin-top: 2rem;
+    color: #666;
+}
+
+/* Add this to your style.css */
+.calendar-panel {
+    background-color: white;
+    border-radius: 5px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Style for disabled/special dates */
+.flatpickr-day.flatpickr-disabled {
+    background-color: #ffcccc !important; /* Red background */
+    color: #333 !important; /* Dark text for readability */
+    border-color: #ffcccc !important; 
+    cursor: pointer !important; /* Pointer cursor */
+}
+
+.add-hours-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+}
+
+.day-select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.time-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .add-hours-form {
+        flex-direction: column;
+    }
+    
+    .day-select, .time-input, .add-hours-form .action-btn {
+        width: 100%;
+    }
+}
+
+.hours-list {
+    list-style: none;
+    padding: 0;
+}
+
+.hour-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.delete-btn {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.delete-btn:hover {
+    background-color: #ff0000;
+}

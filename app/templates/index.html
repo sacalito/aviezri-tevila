@@ -1,0 +1,463 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elevator Control System</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flatpickr.min.css') }}">
+
+    <script src="{{ url_for('static', filename='js/alpine3.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/flatpickr.js') }}" defer></script>
+    
+</head>
+<body x-data="elevatorApp()">
+    <header>
+        <h1>Papa Elevator Control System</h1>
+    </header>
+    
+    <main>
+        <div class="status-card">
+            <h2>System Status</h2>
+            <p x-text="statusMessage2">Waiting for test</p>
+            <p x-text="statusMessage">Checking status...</p>
+            <p x-text="currentTime">Loading time...</p>
+        </div>
+
+        <div class="control-panel">
+            <h2>Elevator Controls</h2>
+            <div class="button-group">
+                <button @click="testElevator" class="action-btn">Full Test</button>
+                <button @click="testFloor(4)" class="action-btn">Test PB</button>
+                <button @click="testFloor(17)" class="action-btn">Test 5</button>
+                <button @click="testFloor(27)" class="action-btn">Test 18</button>
+                <button @click="testFloor(22)" class="action-btn">Test Relay4</button>
+            </div>
+        </div>
+
+        <div class="schedule-panel">
+            <h2>Scheduled Hours</h2>
+            <div class="add-hours-form">
+                <select x-ref="daySelect" class="day-select">
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                    <option value="Holiday">Holiday</option>
+                </select>
+                <input type="time" x-ref="startTimeInput" class="time-input" placeholder="Start Time">
+                <input type="time" x-ref="endTimeInput" class="time-input" placeholder="End Time">
+                <button @click="addHours" class="action-btn">Add Hours</button>
+            </div>
+            <div>
+                <template x-if="hours.length > 0">
+                    <div class="hours-container">
+                        <ul class="hours-list">
+                            <template x-for="hour in hours" :key="hour.id">
+                                <li class="hour-item">
+                                    <span x-text="`${hour.day}: ${hour.start_time} - ${hour.end_time}`"></span>
+                                    <button @click="deleteHour(hour.id)" class="delete-btn">X</button>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+                <template x-if="hours.length === 0">
+                    <p>No scheduled hours found</p>
+                </template>
+                <template x-if="hoursError">
+                    <p x-text="hoursError" class="error-message"></p>
+                </template>
+            </div>
+        </div>
+
+        <div class="calendar-panel">
+            <h2>Special Dates</h2>
+            <div id="calendar" x-ref="calendar"></div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 Papa Elevator Control System</p>
+    </footer>
+
+    <script>
+        function elevatorApp() {
+            return {
+                currentTime: 'Loading time...',
+                statusMessage: 'Checking status...',
+                statusMessage2: 'Checking status...',
+                hours: [],
+                hoursError: '',
+                specialDates: [],
+                specialDatesWithIds: [], // Add this new property
+                apiToken: 'FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX',
+                calendar: null,
+                
+                init() {
+                    this.startClock();
+                    this.checkStatus();
+                    this.loadHours();
+                    this.loadSpecialDates();
+                    this.initCalendar();
+                },
+                
+                startClock() {
+                    this.updateTime();
+                    setInterval(() => this.updateTime(), 1000);
+                },
+                
+                updateTime() {
+                    const now = new Date();
+                    this.currentTime = `Current Time: ${now.toLocaleString()}`;
+                },
+                
+                async checkStatus() {
+                    try {
+                        const response = await fetch('/api/status', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': 'Bearer ' + this.apiToken
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        
+                        const data = await response.json();
+                        this.statusMessage = `Status: ${data.status} (Last updated: ${data.time})`;
+                        
+                    } catch (error) {
+                        this.statusMessage = 'Error connecting to server';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                async loadHours() {
+                    try {
+                        const response = await fetch('/hours', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({})
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.hours && Array.isArray(data.hours)) {
+                            // Sort hours by day and time
+                            this.hours = data.hours;
+                        } else {
+                            this.hours = [];
+                        }
+                        this.hoursError = '';
+                        
+                    } catch (error) {
+                        this.hoursError = 'Error loading schedule';
+                        console.error('Error loading hours:', error);
+                    }
+                },
+                
+                async loadSpecialDates() {
+                    try {
+                        const response = await fetch('/dates', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': 'Bearer ' + this.apiToken
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to load special dates');
+                        }
+                        
+                        const data = await response.json();
+                        if (data.dates && Array.isArray(data.dates)) {
+                            // Store both date and id
+                            this.specialDatesWithIds = data.dates;
+                            // For calendar display, we just need the dates
+                            this.specialDates = data.dates.map(d => d.date);
+                            this.updateCalendar();
+                        }
+                    } catch (error) {
+                        console.error('Error loading special dates:', error);
+                    }
+                },
+                
+                initCalendar() {
+                    const self = this;
+                    this.$nextTick(() => {
+                        this.calendar = flatpickr(this.$refs.calendar, {
+                            inline: true,
+                            mode: "multiple",
+                            dateFormat: "Y-m-d",
+                            disable: [],
+                            onChange: function(selectedDates, dateStr, instance) {
+                                // Handle clicks on regular dates - add them as special dates
+                                if (dateStr) {
+                                    // Make sure this date isn't already in specialDates
+                                    const isSpecialDate = self.specialDates.includes(dateStr);
+                                    if (!isSpecialDate) {
+                                        self.addSpecialDateFromCalendar(dateStr);
+                                        // if (confirm(`Add ${dateStr} as a special date?`)) {
+                                        //     self.addSpecialDateFromCalendar(dateStr);
+                                        // }
+                                    }
+                                    // Clear selection after handling
+                                    instance.clear();
+                                }
+                            },
+                            onDayCreate: function(dObj, dStr, fp, dayElem) {
+                                // Find if this day is in specialDates
+                                const dateString = dayElem.dateObj.toISOString().split('T')[0];
+                                const specialDate = self.specialDates.find(date => date === dateString);
+                                
+                                if (specialDate) {
+                                    // Add click handler to delete the date
+                                    dayElem.addEventListener('click', function(e) {
+                                        // Find the date object with this date value
+                                        const dateToDelete = self.specialDates.find(d => d === dateString);
+                                        if (dateToDelete) {
+                                            self.deleteSpecialDate(dateString);
+                                            // e.stopPropagation(); // Prevent flatpickr from handling the click
+                                            // if (confirm(`Delete special date ${dateString}?`)) {
+                                            //     self.deleteSpecialDate(dateString);
+                                            // }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        this.updateCalendar();
+                    });
+                },
+
+                async addSpecialDateFromCalendar(dateString) {
+                    try {
+                        const response = await fetch('/add_date', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ date: dateString })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to add special date');
+                        }
+                        
+                        // Reload special dates to update the calendar
+                        await this.loadSpecialDates();
+                        this.statusMessage = `Special date added: ${dateString}`;
+                    } catch (error) {
+                        this.statusMessage = 'Error adding special date';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                updateCalendar() {
+                    if (this.calendar) {
+                        if (this.specialDates.length > 0) {
+                            // Highlight special dates
+                            this.calendar.set('disable', this.specialDates.map(date => ({
+                                from: date,
+                                to: date
+                            })));
+                        } else {
+                            // If no special dates, clear all disabled dates
+                            this.calendar.set('disable', []);
+                        }
+                        this.calendar.redraw();
+                    }
+                },
+                
+                async deleteSpecialDate(dateString) {
+                    try {
+                        // Find the special date with this date value to get its ID
+                        const specialDate = this.specialDatesWithIds.find(d => d.date === dateString);
+                        if (!specialDate) return;
+                        
+                        const response = await fetch('/delete_date', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ date_id: specialDate.id })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to delete special date');
+                        }
+                        
+                        // Reload special dates to update the calendar
+                        await this.loadSpecialDates();
+                        this.statusMessage = `Special date deleted: ${dateString}`;
+                    } catch (error) {
+                        this.statusMessage = 'Error deleting special date';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                async testElevator() {
+                    try {
+                        const response = await fetch('/test', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({  })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to close elevator');
+                        }
+                        
+                        const data = await response.json();
+                        this.statusMessage2 = `Test Executed: ${JSON.stringify(data)}`;
+                    } catch (error) {
+                        this.statusMessage2 = 'Error Testing';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                async testFloor(relay_id) {
+                    try {
+                        const response = await fetch('/test_floor', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ relay_id: relay_id })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to close elevator');
+                        }
+                        
+                        const data = await response.json();
+                        this.statusMessage2 = `Test Executed: ${JSON.stringify(data)}`;
+                    } catch (error) {
+                        this.statusMessage2 = 'Error Testing';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                async addHours() {
+                    try {
+                        const day = this.$refs.daySelect.value;
+                        const startTime = this.$refs.startTimeInput.value;
+                        const endTime = this.$refs.endTimeInput.value;
+                        
+                        if (!day || !startTime || !endTime) {
+                            alert('Please select day, start time and end time');
+                            return;
+                        }
+                        
+                        const response = await fetch('/add_hours', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ 
+                                day: day, 
+                                start_time: startTime, 
+                                end_time: endTime 
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to add hours');
+                        }
+                        
+                        // Reload hours to update the list
+                        await this.loadHours();
+                        
+                        // Reset form
+                        this.$refs.startTimeInput.value = '';
+                        this.$refs.endTimeInput.value = '';
+                        
+                        this.statusMessage = `Hours added for ${day}`;
+                    } catch (error) {
+                        this.statusMessage = 'Error adding hours';
+                        console.error('Error:', error);
+                    }
+                },
+
+                async deleteHour(hourId) {
+                    try {
+                        if (confirm("Are you sure you want to delete these hours?")) {
+                            const response = await fetch('/delete_hours', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + this.apiToken
+                                },
+                                body: JSON.stringify({ hour_id: hourId })
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error('Failed to delete hours');
+                            }
+                            
+                            // Reload hours to update the list
+                            await this.loadHours();
+                            this.statusMessage = 'Hours deleted successfully';
+                        }
+                    } catch (error) {
+                        this.statusMessage = 'Error deleting hours';
+                        console.error('Error:', error);
+                    }
+                },
+                
+                async addSpecialDate() {
+                    try {
+                        const newDate = this.$refs.newDateInput.value;
+                        if (!newDate) {
+                            alert('Please select a date');
+                            return;
+                        }
+                        
+                        const response = await fetch('/add_date', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ date: newDate })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to add special date');
+                        }
+                        
+                        // Reload special dates to update the calendar
+                        await this.loadSpecialDates();
+                        this.$refs.newDateInput.value = '';
+                        this.statusMessage = `Special date added: ${newDate}`;
+                    } catch (error) {
+                        this.statusMessage = 'Error adding special date';
+                        console.error('Error:', error);
+                    }
+                }
+            };
+        }
+        </script>
+</body>
+</html>
