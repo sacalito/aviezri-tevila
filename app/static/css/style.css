@@ -23,7 +23,7 @@ header {
     border-radius: 5px;
 }
 
-.status-card, .control-panel, .schedule-panel {
+.status-card, .control-panel, .schedule-panel, .calendar-panel {
     background-color: white;
     border-radius: 5px;
     padding: 1.5rem;
@@ -31,10 +31,51 @@ header {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
+.relay-states {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.relay-badge {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.badge-on {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.badge-off {
+    background-color: #9e9e9e;
+    color: white;
+}
+
+.relay-controls {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.relay-group {
+    flex: 1;
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.relay-group h3 {
+    margin-bottom: 0.5rem;
+}
+
 .button-group {
     display: flex;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 .action-btn {
@@ -45,20 +86,38 @@ header {
     font-weight: bold;
     font-size: 1rem;
     transition: background-color 0.3s;
-}
-
-#open-btn {
-    background-color: #4CAF50;
-    color: white;
-}
-
-#close-btn {
-    background-color: #f44336;
+    background-color: #2196F3;
     color: white;
 }
 
 .action-btn:hover {
     opacity: 0.9;
+}
+
+.btn-on {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-off {
+    background-color: #f44336;
+    color: white;
+}
+
+.btn-toggle {
+    min-width: 80px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.toggle-on {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.toggle-off {
+    background-color: #f44336;
+    color: white;
 }
 
 footer {
@@ -67,21 +126,11 @@ footer {
     color: #666;
 }
 
-/* Add this to your style.css */
-.calendar-panel {
-    background-color: white;
-    border-radius: 5px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-/* Style for disabled/special dates */
 .flatpickr-day.flatpickr-disabled {
-    background-color: #ffcccc !important; /* Red background */
-    color: #333 !important; /* Dark text for readability */
-    border-color: #ffcccc !important; 
-    cursor: pointer !important; /* Pointer cursor */
+    background-color: #ffcccc !important;
+    color: #333 !important;
+    border-color: #ffcccc !important;
+    cursor: pointer !important;
 }
 
 .add-hours-form {
@@ -108,16 +157,6 @@ footer {
     border-radius: 4px;
     flex: 1;
     min-width: 100px;
-}
-
-@media (max-width: 768px) {
-    .add-hours-form {
-        flex-direction: column;
-    }
-    
-    .day-select, .time-input, .add-hours-form .action-btn {
-        width: 100%;
-    }
 }
 
 .hours-list {
@@ -150,4 +189,22 @@ footer {
 
 .delete-btn:hover {
     background-color: #ff0000;
+}
+
+@media (max-width: 768px) {
+    .add-hours-form {
+        flex-direction: column;
+    }
+
+    .day-select, .time-input, .add-hours-form .action-btn {
+        width: 100%;
+    }
+
+    .relay-controls {
+        flex-direction: column;
+    }
+
+    .relay-states {
+        flex-direction: column;
+    }
 }

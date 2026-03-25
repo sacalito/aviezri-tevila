@@ -1,85 +1,50 @@
 from gpiozero import LED
-from time import sleep
 import threading
+import logging
 
-relays = {}
+logger = logging.getLogger(__name__)
 
-floors = {
-    1: 4,
-    5: 17,
-    18: 27
+RELAY_PINS = {
+    'heating': 24,
+    'filtering': 23
 }
 
-def checkRelayState(relay_id):
-    if relay_id not in relays:
-        relays[relay_id] = LED(relay_id)
-        relays[relay_id].on()
-    relay_status = relays[relay_id].is_active
-    if relay_status:
-        return 'Relay is Open'
-    else:
-        return 'Relay is Closed'
+# Initialize all relays once at module load
+relays = {}
+for _name, _pin in RELAY_PINS.items():
+    relays[_name] = LED(_pin)
+    relays[_name].on()  # default state: relay open (off)
+    logger.info(f"Initialized relay '{_name}' on GPIO {_pin}")
 
-def relayState(relay_id):
-    if relay_id not in relays:
-        relays[relay_id] = LED(relay_id)
-        relays[relay_id].on()
-    return relays[relay_id].is_active
+def _get_relay(relay_name):
+    if relay_name not in relays:
+        raise ValueError(f"Unknown relay: {relay_name}")
+    return relays[relay_name]
 
-def openRelay(relay_id):
-    if relay_id not in relays:
-        relays[relay_id] = LED(relay_id)
-    relays[relay_id].on()
-    return 'Relay Turned Open'
+def get_relay_state(relay_name):
+    relay = _get_relay(relay_name)
+    return relay.is_active
 
-def closeRelay(relay_id):
-    if relay_id not in relays:
-        relays[relay_id] = LED(relay_id)
-    relays[relay_id].off()
-    return 'Relay Turned Closed'
+def turn_on(relay_name):
+    relay = _get_relay(relay_name)
+    relay.off()  # closing the relay circuit = turning ON
+    logger.info(f"Relay '{relay_name}' turned ON")
+    return True
 
-def openRelayForTime(relay_id, seconds):
-    state = relayState(relay_id)
-    if state:
-        return 'Relay was Open'
-    openRelay(relay_id)
-    timer = threading.Timer(float(seconds), closeRelay, args=[relay_id])
+def turn_off(relay_name):
+    relay = _get_relay(relay_name)
+    relay.on()  # opening the relay circuit = turning OFF
+    logger.info(f"Relay '{relay_name}' turned OFF")
+    return True
+
+def turn_on_for_time(relay_name, seconds):
+    turn_on(relay_name)
+    timer = threading.Timer(float(seconds), turn_off, args=[relay_name])
     timer.start()
-    return 'Relay Turned Open for ' + str(seconds) + ' seconds'
+    logger.info(f"Relay '{relay_name}' turned ON for {seconds} seconds")
 
-def closeRelayForTime(relay_id, seconds):
-    state = relayState(relay_id)
-    if not state:
-        return 'Relay was Closed'
-    closeRelay(relay_id)
-    timer = threading.Timer(float(seconds), openRelay, args=[relay_id])
+def turn_off_for_time(relay_name, seconds):
+    turn_off(relay_name)
+    timer = threading.Timer(float(seconds), turn_on, args=[relay_name])
     timer.start()
-    return 'Relay Turned Closed for ' + str(seconds) + ' seconds'
-
-def activatefloor(floor_id):
-    relay_id = floors[floor_id]
-    closeRelayForTime(relay_id, 1)
-
-def activate_elevator_flow():
-    activatefloor(5)
-    sleep(10)
-    activatefloor(18)
-    sleep(30)
-    activatefloor(5)
-    # sleep(30)
-    # activatefloor(1)
-    # sleep(15)
-    # activatefloor(5)
-
-
-# Make specific items available for import
-__all__ = [
-    'relays',
-    'checkRelayState',
-    'openRelay',
-    'closeRelay',
-    'openRelayForTime',
-    'closeRelayForTime',
-    'activatefloor',
-    'activate_elevator_flow',
-]
+    logger.info(f"Relay '{relay_name}' turned OFF for {seconds} seconds")
