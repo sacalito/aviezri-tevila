@@ -1,0 +1,14 @@
+[Unit]
+Description=Tevila Control System
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/aviezri-tevila/app
+ExecStart=/usr/bin/python3 /root/aviezri-tevila/app/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
