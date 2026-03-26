@@ -12,6 +12,20 @@
     <script src="{{ url_for('static', filename='js/flatpickr.js') }}" defer></script>
 </head>
 <body x-data="tevilaApp()">
+
+    <template x-if="!authenticated">
+        <div class="login-screen">
+            <div class="login-card">
+                <h2>Tevila Control System</h2>
+                <input type="password" x-model="passwordInput" @keyup.enter="login()" placeholder="Enter password" class="login-input">
+                <button @click="login()" class="action-btn btn-on">Login</button>
+                <p x-show="loginError" class="error-message">Wrong password</p>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="authenticated">
+        <div>
     <header>
         <h1>Tevila Control System</h1>
     </header>
@@ -126,10 +140,15 @@
     <footer>
         <p>&copy; 2025 Tevila Control System</p>
     </footer>
+        </div>
+    </template>
 
     <script>
         function tevilaApp() {
             return {
+                authenticated: false,
+                passwordInput: '',
+                loginError: false,
                 currentTime: 'Loading time...',
                 statusMessage: 'Checking status...',
                 heatingState: '...',
@@ -141,14 +160,43 @@
                 apiToken: 'FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX',
                 calendar: null,
 
-                init() {
+                async login() {
+                    try {
+                        const response = await fetch('/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: this.passwordInput })
+                        });
+                        if (response.ok) {
+                            this.authenticated = true;
+                            this.loginError = false;
+                            this.startApp();
+                        } else {
+                            this.loginError = true;
+                        }
+                    } catch (error) {
+                        this.loginError = true;
+                    }
+                },
+
+                startApp() {
                     this.startClock();
                     this.checkStatus();
                     this.loadHours();
                     this.loadSpecialDates();
                     this.initCalendar();
-                    // Refresh status every 30 seconds
                     setInterval(() => this.checkStatus(), 30000);
+                },
+
+                async init() {
+                    try {
+                        const response = await fetch('/check_session');
+                        if (response.ok) {
+                            this.authenticated = true;
+                            this.startApp();
+                            return;
+                        }
+                    } catch (e) {}
                 },
 
                 startClock() {

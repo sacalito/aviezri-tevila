@@ -12,6 +12,7 @@ logger = setup_logging()
 app = Flask(__name__,
             static_folder='static',
             template_folder='templates')
+app.secret_key = 'tEvIlA_s3cr3t_k3y_2026!'
 
 init_db(app)
 

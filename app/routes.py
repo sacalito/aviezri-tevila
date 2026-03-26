@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template
+from flask import Blueprint, request, render_template, session
 from relayControl import get_relay_state, turn_on, turn_off, RELAY_PINS
 from api import require_token
 import logging
@@ -10,9 +10,26 @@ from database import (
 
 routes = Blueprint('routes', __name__)
 
+WEB_PASSWORD = '5582101378'
+
 @routes.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
+
+@routes.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    password = data.get('password', '')
+    if password == WEB_PASSWORD:
+        session['authenticated'] = True
+        return {'success': True}
+    return {'success': False, 'error': 'Wrong password'}, 401
+
+@routes.route('/check_session', methods=['GET'])
+def check_session():
+    if session.get('authenticated'):
+        return {'authenticated': True}
+    return {'authenticated': False}, 401
 
 @routes.route('/api/status', methods=['GET', 'POST'])
 @require_token
