@@ -1,7 +1,7 @@
 from flask import Flask
 from routes import routes
 from log_config import setup_logging
-from database import init_db, get_all_dates, get_hours_by_relay_and_day
+from database import init_db, get_all_dates, get_hours_by_relay_and_day, get_bypass, clear_bypass
 from relayControl import turn_on, turn_off, get_relay_state, RELAY_PINS
 import datetime
 import atexit
@@ -19,9 +19,29 @@ init_db(app)
 def check_relay_schedule(relay_name):
     """Check if a relay should be on or off based on its schedule."""
     now = datetime.datetime.now()
+    now_str = now.strftime('%Y-%m-%d %H:%M:%S')
     current_date = now.strftime('%Y-%m-%d')
     current_day = now.strftime('%A')
     current_time = now.strftime('%H:%M:%S')
+
+    # Check for active bypass
+    bypass = get_bypass(relay_name)
+    if bypass:
+        if bypass.until > now_str:
+            # Bypass is active — enforce its state
+            is_currently_on = not get_relay_state(relay_name)
+            bypass_on = bypass.state == 'on'
+            if bypass_on and not is_currently_on:
+                logger.info(f"[{relay_name}] Bypass ON until {bypass.until}")
+                turn_on(relay_name)
+            elif not bypass_on and is_currently_on:
+                logger.info(f"[{relay_name}] Bypass OFF until {bypass.until}")
+                turn_off(relay_name)
+            return
+        else:
+            # Bypass expired — clear it
+            logger.info(f"[{relay_name}] Bypass expired, clearing")
+            clear_bypass(relay_name)
 
     # Check if today is a special date
     special_dates = get_all_dates()

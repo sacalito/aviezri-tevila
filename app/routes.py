@@ -4,8 +4,9 @@ from api import require_token
 import logging
 from datetime import datetime
 from database import (
-    get_all_hours, add_hours, get_hours_by_relay, delete_hours,
-    get_all_dates, add_date, delete_date
+    get_all_hours, add_hours, get_hours_by_relay, delete_hours, update_hours,
+    get_all_dates, add_date, delete_date,
+    set_bypass, get_all_bypasses, clear_bypass
 )
 
 routes = Blueprint('routes', __name__)
@@ -153,6 +154,37 @@ def add_hours_route():
         logging.error(f'Error adding hours: {e}', exc_info=True)
         return {'error': 'Failed to add hours data'}, 500
 
+@routes.route('/update_hours', methods=['POST'])
+@require_token
+def update_hours_route():
+    try:
+        data = request.get_json()
+        hour_id = data.get('hour_id')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        day = data.get('day')
+
+        if not hour_id:
+            return {'error': 'Missing required field (hour_id)'}, 400
+
+        updated = update_hours(hour_id, start_time=start_time, end_time=end_time, day=day)
+        if updated:
+            return {
+                'success': True,
+                'hours': {
+                    'id': updated.id,
+                    'relay': updated.relay,
+                    'day': updated.day,
+                    'start_time': updated.start_time,
+                    'end_time': updated.end_time
+                }
+            }
+        else:
+            return {'error': f'No hours found with ID {hour_id}'}, 404
+    except Exception as e:
+        logging.error(f'Error updating hours: {e}', exc_info=True)
+        return {'error': 'Failed to update hours'}, 500
+
 @routes.route('/delete_hours', methods=['POST'])
 @require_token
 def delete_hours_route():
@@ -209,3 +241,71 @@ def delete_date_route():
     except Exception as e:
         logging.error(f'Error deleting date: {e}', exc_info=True)
         return {'error': 'Failed to delete date'}, 500
+
+# --- Bypass endpoints ---
+
+@routes.route('/api/bypasses', methods=['GET'])
+@require_token
+def get_bypasses():
+    try:
+        bypasses = get_all_bypasses()
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        result = []
+        for b in bypasses:
+            if b.until > now:
+                result.append({'relay': b.relay, 'state': b.state, 'until': b.until})
+            else:
+                clear_bypass(b.relay)
+        return {'bypasses': result}
+    except Exception as e:
+        logging.error(f'Error fetching bypasses: {e}', exc_info=True)
+        return {'error': 'Failed to retrieve bypasses'}, 500
+
+@routes.route('/relay/bypass', methods=['POST'])
+@require_token
+def set_bypass_route():
+    try:
+        data = request.get_json()
+        relay = data.get('relay')
+        state = data.get('state')
+        until = data.get('until')
+
+        if not all([relay, state, until]):
+            return {'error': 'Missing required fields (relay, state, until)'}, 400
+        if relay not in RELAY_PINS:
+            return {'error': f'Unknown relay: {relay}'}, 400
+        if state not in ('on', 'off'):
+            return {'error': 'State must be "on" or "off"'}, 400
+
+        bypass = set_bypass(relay, state, until)
+
+        if state == 'on':
+            turn_on(relay)
+        else:
+            turn_off(relay)
+
+        logging.info(f'Bypass set: {relay} {state} until {until}')
+        return {
+            'success': True,
+            'bypass': {'relay': bypass.relay, 'state': bypass.state, 'until': bypass.until}
+        }
+    except Exception as e:
+        logging.error(f'Error setting bypass: {e}', exc_info=True)
+        return {'error': 'Failed to set bypass'}, 500
+
+@routes.route('/relay/clear_bypass', methods=['POST'])
+@require_token
+def clear_bypass_route():
+    try:
+        data = request.get_json()
+        relay = data.get('relay')
+        if not relay:
+            return {'error': 'Missing relay field'}, 400
+        result = clear_bypass(relay)
+        if result:
+            logging.info(f'Bypass cleared for {relay}')
+            return {'success': True, 'message': f'Bypass cleared for {relay}'}
+        return {'error': 'No active bypass for this relay'}, 404
+    except Exception as e:
+        logging.error(f'Error clearing bypass: {e}', exc_info=True)
+        return {'error': 'Failed to clear bypass'}, 500

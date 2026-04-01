@@ -1,145 +1,431 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="corporate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tevila Control System</title>
+    <title>Tevila Control</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/flatpickr.min.css') }}">
 
     <script src="{{ url_for('static', filename='js/alpine3.min.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/flatpickr.js') }}" defer></script>
-</head>
-<body x-data="tevilaApp()">
 
+    <style>
+        [x-cloak] { display: none !important; }
+
+        /* Flatpickr theme override */
+        .flatpickr-calendar {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            font-family: inherit;
+        }
+        .flatpickr-months, .flatpickr-month {
+            background: #fff;
+            border-radius: 1rem 1rem 0 0;
+        }
+        .flatpickr-months .flatpickr-prev-month:hover,
+        .flatpickr-months .flatpickr-next-month:hover {
+            color: oklch(var(--p));
+            fill: oklch(var(--p));
+        }
+        .flatpickr-day {
+            border-radius: 0.5rem;
+        }
+        .flatpickr-day:hover {
+            background: oklch(var(--p) / 0.1);
+            border-color: oklch(var(--p) / 0.1);
+        }
+        .flatpickr-day.today {
+            border-color: oklch(var(--p));
+        }
+        .flatpickr-day.flatpickr-disabled {
+            background: #fee2e2 !important;
+            color: #dc2626 !important;
+            border-color: #fecaca !important;
+            cursor: pointer !important;
+            font-weight: 600;
+        }
+        .flatpickr-day.flatpickr-disabled:hover {
+            background: #fecaca !important;
+        }
+        .dayContainer {
+            min-width: 280px;
+            max-width: 280px;
+        }
+        .flatpickr-innerContainer {
+            border-bottom: none;
+        }
+
+        /* Toast animation */
+        .toast-enter { animation: slideIn 0.3s ease-out; }
+        .toast-exit { animation: slideOut 0.3s ease-in forwards; }
+        @keyframes slideIn { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-0.5rem); } }
+
+        /* Pulse glow for active relay */
+        .relay-active-heating { box-shadow: 0 0 24px rgba(234, 88, 12, 0.15); }
+        .relay-active-filtering { box-shadow: 0 0 24px rgba(6, 182, 212, 0.15); }
+    </style>
+</head>
+<body x-data="tevilaApp()" class="bg-white min-h-screen">
+
+    <!-- Toast Notifications -->
+    <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2" x-cloak>
+        <template x-for="(toast, i) in toasts" :key="toast.id">
+            <div class="alert shadow-lg max-w-sm" :class="{
+                'alert-success': toast.type === 'success',
+                'alert-error': toast.type === 'error',
+                'alert-info': toast.type === 'info',
+                'toast-enter': !toast.exiting,
+                'toast-exit': toast.exiting
+            }">
+                <span class="text-sm" x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
+
+    <!-- Login Screen -->
     <template x-if="!authenticated">
-        <div class="login-screen">
-            <div class="login-card">
-                <h2>Tevila Control System</h2>
-                <input type="password" x-model="passwordInput" @keyup.enter="login()" placeholder="Enter password" class="login-input">
-                <button @click="login()" class="action-btn btn-on">Login</button>
-                <p x-show="loginError" class="error-message">Wrong password</p>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="card bg-white shadow-lg w-full max-w-sm border border-gray-100 rounded-2xl">
+                <div class="card-body items-center text-center gap-6">
+                    <div>
+                        <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Tevila Control</h2>
+                        <p class="text-sm opacity-50 mt-1">Enter password to continue</p>
+                    </div>
+                    <div class="w-full space-y-3">
+                        <input type="password" x-model="passwordInput" @keyup.enter="login()" placeholder="Password" class="input input-bordered w-full focus:input-primary" />
+                        <button @click="login()" class="btn btn-primary w-full">Login</button>
+                    </div>
+                    <p x-show="loginError" class="text-error text-sm" x-cloak>Incorrect password</p>
+                </div>
             </div>
         </div>
     </template>
 
+    <!-- Main App -->
     <template x-if="authenticated">
-        <div>
-    <header>
-        <h1>Tevila Control System</h1>
-    </header>
+        <div class="max-w-6xl mx-auto p-4 md:p-6">
 
-    <main>
-        <div class="status-card">
-            <h2>System Status</h2>
-            <p x-text="currentTime">Loading time...</p>
-            <p x-text="statusMessage">Checking status...</p>
-            <div class="relay-states">
-                <span class="relay-badge" :class="heatingState === 'on' ? 'badge-on' : 'badge-off'" x-text="'Heating: ' + heatingState"></span>
-                <span class="relay-badge" :class="filteringState === 'on' ? 'badge-on' : 'badge-off'" x-text="'Filtering: ' + filteringState"></span>
-            </div>
-        </div>
-
-        <div class="control-panel">
-            <h2>Relay Controls</h2>
-            <div class="relay-controls">
-                <div class="relay-group">
-                    <h3>Heating</h3>
-                    <div class="button-group">
-                        <button @click="relayOn('heating')" class="action-btn btn-on">Turn ON</button>
-                        <button @click="relayOff('heating')" class="action-btn btn-off">Turn OFF</button>
-                        <button @click="toggleRelay('heating')" class="action-btn btn-toggle" :class="heatingState === 'on' ? 'toggle-on' : 'toggle-off'" x-text="heatingState === 'on' ? 'Toggle OFF' : 'Toggle ON'"></button>
-                    </div>
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold">Tevila Control</h1>
+                    <p class="text-sm opacity-40 mt-0.5" x-text="currentTime"></p>
                 </div>
-                <div class="relay-group">
-                    <h3>Filtering</h3>
-                    <div class="button-group">
-                        <button @click="relayOn('filtering')" class="action-btn btn-on">Turn ON</button>
-                        <button @click="relayOff('filtering')" class="action-btn btn-off">Turn OFF</button>
-                        <button @click="toggleRelay('filtering')" class="action-btn btn-toggle" :class="filteringState === 'on' ? 'toggle-on' : 'toggle-off'" x-text="filteringState === 'on' ? 'Toggle OFF' : 'Toggle ON'"></button>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-success animate-pulse"></div>
+                    <span class="text-sm opacity-60">Online</span>
                 </div>
             </div>
-        </div>
 
-        <div class="schedule-panel">
-            <h2>Heating Schedule</h2>
-            <div class="add-hours-form">
-                <select x-ref="heatingDaySelect" class="day-select">
-                    <option value="Monday">Monday</option>
-                    <option value="Tuesday">Tuesday</option>
-                    <option value="Wednesday">Wednesday</option>
-                    <option value="Thursday">Thursday</option>
-                    <option value="Friday">Friday</option>
-                    <option value="Saturday">Saturday</option>
-                    <option value="Sunday">Sunday</option>
-                    <option value="Holiday">Holiday</option>
-                </select>
-                <input type="time" x-ref="heatingStartTime" class="time-input">
-                <input type="time" x-ref="heatingEndTime" class="time-input">
-                <button @click="addHours('heating')" class="action-btn">Add</button>
+            <!-- Active Bypasses -->
+            <div class="flex flex-wrap gap-3 mb-3" x-show="activeBypasses.length > 0">
+                <template x-for="(bp, i) in activeBypasses" :key="'bp-'+i">
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border" :class="bp.relay === 'heating' ? 'bg-orange-50 text-orange-800 border-orange-200' : 'bg-cyan-50 text-cyan-800 border-cyan-200'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                        <span>
+                            BYPASS <span class="uppercase" x-text="bp.state"></span>
+                            <span class="capitalize" x-text="bp.relay"></span>
+                            <span class="opacity-60">until</span>
+                            <span x-text="bp.display"></span>
+                        </span>
+                        <button @click="clearBypass(bp.relay)" class="btn btn-ghost btn-xs ml-1 opacity-50 hover:opacity-100">&times;</button>
+                    </div>
+                </template>
             </div>
-            <div>
-                <template x-if="heatingHours.length > 0">
-                    <ul class="hours-list">
-                        <template x-for="hour in heatingHours" :key="hour.id">
-                            <li class="hour-item">
-                                <span x-text="`${hour.day}: ${hour.start_time} - ${hour.end_time}`"></span>
-                                <button @click="deleteHour(hour.id)" class="delete-btn">X</button>
-                            </li>
+
+            <!-- Next Actions -->
+            <div class="flex flex-wrap gap-3 mb-8" x-show="nextActions.length > 0 || activeBypasses.length > 0">
+                <template x-for="(action, i) in nextActions" :key="i">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" :class="action.relay === 'heating' ? 'bg-orange-50 text-orange-700' : 'bg-cyan-50 text-cyan-700'">
+                        <svg x-show="action.relay === 'heating'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
+                        <svg x-show="action.relay === 'filtering'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z" /></svg>
+                        <span>
+                            <span class="font-semibold capitalize" x-text="action.relay"></span>
+                            <span x-text="action.state"></span>
+                            <span class="opacity-60">at</span>
+                            <span class="font-medium" x-text="action.time"></span>
+                        </span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Relay Dashboard -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <!-- Heating Card -->
+                <div class="card border rounded-2xl transition-all duration-300" :class="heatingState === 'on' ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 relay-active-heating' : 'bg-white border-gray-100'">
+                    <div class="card-body gap-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="heatingState === 'on' ? 'bg-orange-100' : 'bg-base-200'">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :class="heatingState === 'on' ? 'text-orange-500' : 'opacity-30'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg">Heating</h3>
+                                    <p class="text-xs opacity-50">GPIO 24</p>
+                                </div>
+                            </div>
+                            <div class="badge badge-lg font-bold" :class="heatingState === 'on' ? 'badge-warning' : 'badge-neutral'">
+                                <span class="uppercase" x-text="heatingState"></span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="openBypassModal('heating', 'on')" class="btn btn-sm flex-1" :class="heatingState === 'on' ? 'btn-warning btn-outline' : 'btn-warning'">ON</button>
+                            <button @click="openBypassModal('heating', 'off')" class="btn btn-sm flex-1" :class="heatingState === 'off' ? 'btn-neutral btn-outline' : 'btn-neutral'">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtering Card -->
+                <div class="card border rounded-2xl transition-all duration-300" :class="filteringState === 'on' ? 'bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200 relay-active-filtering' : 'bg-white border-gray-100'">
+                    <div class="card-body gap-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="filteringState === 'on' ? 'bg-cyan-100' : 'bg-base-200'">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :class="filteringState === 'on' ? 'text-cyan-500' : 'opacity-30'" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z" /></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg">Filtering</h3>
+                                    <p class="text-xs opacity-50">GPIO 23</p>
+                                </div>
+                            </div>
+                            <div class="badge badge-lg font-bold" :class="filteringState === 'on' ? 'badge-info' : 'badge-neutral'">
+                                <span class="uppercase" x-text="filteringState"></span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="openBypassModal('filtering', 'on')" class="btn btn-sm flex-1" :class="filteringState === 'on' ? 'btn-info btn-outline' : 'btn-info'">ON</button>
+                            <button @click="openBypassModal('filtering', 'off')" class="btn btn-sm flex-1" :class="filteringState === 'off' ? 'btn-neutral btn-outline' : 'btn-neutral'">OFF</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedules - Two Column -->
+            <h2 class="text-xl font-bold mb-4">Schedules</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+                <!-- Heating Schedule Column -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-2 h-5 rounded-full bg-orange-400"></div>
+                        <h3 class="font-bold text-lg">Heating</h3>
+                    </div>
+
+                    <!-- Add form -->
+                    <div class="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-3 mb-3">
+                        <select x-ref="heatingDaySelect" class="select select-bordered select-sm flex-1 min-w-[100px]">
+                            <template x-for="d in allDays" :key="'hs-'+d">
+                                <option :value="d" x-text="d"></option>
+                            </template>
+                        </select>
+                        <input type="time" x-ref="heatingStartTime" class="input input-bordered input-sm w-28" />
+                        <input type="time" x-ref="heatingEndTime" class="input input-bordered input-sm w-28" />
+                        <button @click="addHours('heating')" class="btn btn-warning btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                    </div>
+
+                    <!-- Day groups -->
+                    <div class="space-y-2.5">
+                        <template x-for="day in allDays" :key="'heating-' + day">
+                            <div x-show="heatingHoursByDay(day).length > 0" class="border border-gray-100 rounded-xl overflow-hidden">
+                                <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50/80">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-sm" x-text="day"></span>
+                                        <span class="text-xs text-gray-400" x-text="heatingHoursByDay(day).length + ' entries'"></span>
+                                    </div>
+                                    <button @click="openCopyDay('heating', day)" class="btn btn-ghost btn-xs gap-1 text-gray-400 hover:text-gray-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                        Copy
+                                    </button>
+                                </div>
+                                <ul>
+                                    <template x-for="hour in heatingHoursByDay(day)" :key="hour.id">
+                                        <li class="border-t border-gray-50">
+                                            <div x-show="editingId !== hour.id" class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/50 transition-colors">
+                                                <div class="flex items-center gap-2.5">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    <span class="font-mono text-sm" x-text="`${hour.start_time} - ${hour.end_time}`"></span>
+                                                </div>
+                                                <div class="flex gap-1">
+                                                    <button @click="startEdit(hour)" class="btn btn-ghost btn-xs text-gray-400 hover:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                                    <button @click="openDuplicate(hour)" class="btn btn-ghost btn-xs text-gray-400 hover:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></button>
+                                                    <button @click="deleteHour(hour.id)" class="btn btn-ghost btn-xs text-gray-300 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                                </div>
+                                            </div>
+                                            <div x-show="editingId === hour.id" class="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-amber-50/50" x-cloak>
+                                                <input type="time" class="input input-bordered input-sm w-28" x-model="editStart" />
+                                                <span class="text-gray-300">to</span>
+                                                <input type="time" class="input input-bordered input-sm w-28" x-model="editEnd" />
+                                                <div class="flex gap-1 ml-auto">
+                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Save</button>
+                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                         </template>
-                    </ul>
-                </template>
-                <template x-if="heatingHours.length === 0">
-                    <p>No heating schedule configured</p>
-                </template>
-            </div>
-        </div>
+                        <p x-show="heatingHours.length === 0" class="text-sm text-gray-300 text-center py-8">No heating schedule</p>
+                    </div>
+                </div>
 
-        <div class="schedule-panel">
-            <h2>Filtering Schedule</h2>
-            <div class="add-hours-form">
-                <select x-ref="filteringDaySelect" class="day-select">
-                    <option value="Monday">Monday</option>
-                    <option value="Tuesday">Tuesday</option>
-                    <option value="Wednesday">Wednesday</option>
-                    <option value="Thursday">Thursday</option>
-                    <option value="Friday">Friday</option>
-                    <option value="Saturday">Saturday</option>
-                    <option value="Sunday">Sunday</option>
-                    <option value="Holiday">Holiday</option>
-                </select>
-                <input type="time" x-ref="filteringStartTime" class="time-input">
-                <input type="time" x-ref="filteringEndTime" class="time-input">
-                <button @click="addHours('filtering')" class="action-btn">Add</button>
-            </div>
-            <div>
-                <template x-if="filteringHours.length > 0">
-                    <ul class="hours-list">
-                        <template x-for="hour in filteringHours" :key="hour.id">
-                            <li class="hour-item">
-                                <span x-text="`${hour.day}: ${hour.start_time} - ${hour.end_time}`"></span>
-                                <button @click="deleteHour(hour.id)" class="delete-btn">X</button>
-                            </li>
+                <!-- Filtering Schedule Column -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-2 h-5 rounded-full bg-cyan-400"></div>
+                        <h3 class="font-bold text-lg">Filtering</h3>
+                    </div>
+
+                    <!-- Add form -->
+                    <div class="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-3 mb-3">
+                        <select x-ref="filteringDaySelect" class="select select-bordered select-sm flex-1 min-w-[100px]">
+                            <template x-for="d in allDays" :key="'fs-'+d">
+                                <option :value="d" x-text="d"></option>
+                            </template>
+                        </select>
+                        <input type="time" x-ref="filteringStartTime" class="input input-bordered input-sm w-28" />
+                        <input type="time" x-ref="filteringEndTime" class="input input-bordered input-sm w-28" />
+                        <button @click="addHours('filtering')" class="btn btn-info btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                    </div>
+
+                    <!-- Day groups -->
+                    <div class="space-y-2.5">
+                        <template x-for="day in allDays" :key="'filtering-' + day">
+                            <div x-show="filteringHoursByDay(day).length > 0" class="border border-gray-100 rounded-xl overflow-hidden">
+                                <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50/80">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-sm" x-text="day"></span>
+                                        <span class="text-xs text-gray-400" x-text="filteringHoursByDay(day).length + ' entries'"></span>
+                                    </div>
+                                    <button @click="openCopyDay('filtering', day)" class="btn btn-ghost btn-xs gap-1 text-gray-400 hover:text-gray-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                        Copy
+                                    </button>
+                                </div>
+                                <ul>
+                                    <template x-for="hour in filteringHoursByDay(day)" :key="hour.id">
+                                        <li class="border-t border-gray-50">
+                                            <div x-show="editingId !== hour.id" class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/50 transition-colors">
+                                                <div class="flex items-center gap-2.5">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    <span class="font-mono text-sm" x-text="`${hour.start_time} - ${hour.end_time}`"></span>
+                                                </div>
+                                                <div class="flex gap-1">
+                                                    <button @click="startEdit(hour)" class="btn btn-ghost btn-xs text-gray-400 hover:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                                    <button @click="openDuplicate(hour)" class="btn btn-ghost btn-xs text-gray-400 hover:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></button>
+                                                    <button @click="deleteHour(hour.id)" class="btn btn-ghost btn-xs text-gray-300 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                                </div>
+                                            </div>
+                                            <div x-show="editingId === hour.id" class="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-cyan-50/50" x-cloak>
+                                                <input type="time" class="input input-bordered input-sm w-28" x-model="editStart" />
+                                                <span class="text-gray-300">to</span>
+                                                <input type="time" class="input input-bordered input-sm w-28" x-model="editEnd" />
+                                                <div class="flex gap-1 ml-auto">
+                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Save</button>
+                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                         </template>
-                    </ul>
-                </template>
-                <template x-if="filteringHours.length === 0">
-                    <p>No filtering schedule configured</p>
-                </template>
+                        <p x-show="filteringHours.length === 0" class="text-sm text-gray-300 text-center py-8">No filtering schedule</p>
+                    </div>
+                </div>
+
             </div>
-        </div>
 
-        <div class="calendar-panel">
-            <h2>Special Dates (Holidays)</h2>
-            <div id="calendar" x-ref="calendar"></div>
-        </div>
-    </main>
+            <!-- Bypass Modal -->
+            <div x-show="showBypassModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="closeBypassModal()" x-cloak x-transition.opacity>
+                <div class="card bg-white w-80 shadow-2xl border border-gray-100 rounded-2xl" x-transition>
+                    <div class="card-body gap-4">
+                        <div>
+                            <h3 class="font-bold text-lg">Bypass <span class="capitalize" x-text="bypassRelay"></span></h3>
+                            <p class="text-sm opacity-50 mt-0.5">
+                                Turn <span class="uppercase font-semibold" x-text="bypassState"></span> until:
+                            </p>
+                        </div>
+                        <!-- Quick options -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="setBypassQuick(1)" class="btn btn-sm btn-outline">1 hour</button>
+                            <button @click="setBypassQuick(2)" class="btn btn-sm btn-outline">2 hours</button>
+                            <button @click="setBypassQuick(4)" class="btn btn-sm btn-outline">4 hours</button>
+                            <button @click="setBypassQuick(8)" class="btn btn-sm btn-outline">8 hours</button>
+                            <button @click="setBypassQuick(12)" class="btn btn-sm btn-outline">12 hours</button>
+                            <button @click="setBypassQuick(24)" class="btn btn-sm btn-outline">24 hours</button>
+                        </div>
+                        <!-- Custom -->
+                        <div class="divider text-xs opacity-40 my-0">or pick a time</div>
+                        <div class="flex gap-2">
+                            <input type="date" class="input input-bordered input-sm flex-1" x-model="bypassDate" :min="todayDate" />
+                            <input type="time" class="input input-bordered input-sm w-28" x-model="bypassTime" />
+                        </div>
+                        <div class="flex gap-2 justify-end pt-1">
+                            <button @click="closeBypassModal()" class="btn btn-ghost btn-sm">Cancel</button>
+                            <button @click="confirmBypass()" class="btn btn-primary btn-sm" :disabled="!bypassDate || !bypassTime">Set Bypass</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <footer>
-        <p>&copy; 2025 Tevila Control System</p>
-    </footer>
+            <!-- Duplicate / Copy Day Modal -->
+            <div x-show="showDayPicker" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="closeDayPicker()" x-cloak x-transition.opacity>
+                <div class="card bg-white w-80 shadow-2xl border border-gray-100 rounded-2xl" x-transition>
+                    <div class="card-body gap-4">
+                        <div>
+                            <h3 class="font-bold text-lg" x-text="dayPickerTitle"></h3>
+                            <p class="text-sm opacity-50 mt-0.5" x-text="dayPickerSubtitle"></p>
+                        </div>
+                        <div class="space-y-1">
+                            <template x-for="d in availableDaysForPicker" :key="d">
+                                <label class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-base-200 cursor-pointer transition-colors">
+                                    <input type="checkbox" :value="d" x-model="selectedDays" class="checkbox checkbox-sm checkbox-primary" />
+                                    <span class="text-sm font-medium" x-text="d"></span>
+                                </label>
+                            </template>
+                        </div>
+                        <div class="flex gap-2 justify-end pt-2">
+                            <button @click="closeDayPicker()" class="btn btn-ghost btn-sm">Cancel</button>
+                            <button @click="confirmDayPicker()" class="btn btn-primary btn-sm" :disabled="selectedDays.length === 0">
+                                Duplicate
+                                <span x-show="selectedDays.length > 0" class="badge badge-sm" x-text="selectedDays.length"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Dates -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4">Special Dates</h2>
+                <div class="card bg-white border border-gray-100 rounded-2xl">
+                    <div class="card-body">
+                        <p class="text-sm opacity-50 mb-3">Click a date to mark it as a holiday. Click a highlighted date to remove it.</p>
+                        <div id="calendar" x-ref="calendar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center text-xs opacity-30 pb-8">
+                Tevila Control System
+            </footer>
+
         </div>
     </template>
 
@@ -149,8 +435,7 @@
                 authenticated: false,
                 passwordInput: '',
                 loginError: false,
-                currentTime: 'Loading time...',
-                statusMessage: 'Checking status...',
+                currentTime: '',
                 heatingState: '...',
                 filteringState: '...',
                 heatingHours: [],
@@ -160,6 +445,335 @@
                 apiToken: 'FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX',
                 calendar: null,
 
+                allDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Holiday'],
+                scheduleTab: 'heating',
+
+                editingId: null,
+                editStart: '',
+                editEnd: '',
+
+                showDayPicker: false,
+                dayPickerTitle: '',
+                dayPickerSubtitle: '',
+                selectedDays: [],
+                dayPickerMode: null,
+                dayPickerRelay: null,
+                dayPickerSourceDay: null,
+                dayPickerHour: null,
+                availableDaysForPicker: [],
+
+                nextActions: [],
+                activeBypasses: [],
+
+                // Bypass modal
+                showBypassModal: false,
+                bypassRelay: '',
+                bypassState: '',
+                bypassDate: '',
+                bypassTime: '',
+
+                toasts: [],
+                toastId: 0,
+
+                // --- Toast ---
+                showToast(message, type = 'info') {
+                    const id = ++this.toastId;
+                    this.toasts.push({ id, message, type, exiting: false });
+                    setTimeout(() => {
+                        const t = this.toasts.find(t => t.id === id);
+                        if (t) t.exiting = true;
+                        setTimeout(() => {
+                            this.toasts = this.toasts.filter(t => t.id !== id);
+                        }, 300);
+                    }, 3000);
+                },
+
+                // --- Next Actions ---
+                computeNextActions() {
+                    const now = new Date();
+                    const nowMins = now.getHours() * 60 + now.getMinutes();
+                    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const todayStr = now.toISOString().split('T')[0];
+                    const isHoliday = this.specialDates.includes(todayStr);
+                    const todayDay = isHoliday ? 'Holiday' : days[now.getDay()];
+
+                    const allHours = [...this.heatingHours, ...this.filteringHours];
+                    const todayEntries = allHours.filter(h => h.day === todayDay);
+
+                    const events = [];
+                    for (const entry of todayEntries) {
+                        const [sh, sm] = entry.start_time.split(':').map(Number);
+                        const [eh, em] = entry.end_time.split(':').map(Number);
+                        const startMins = sh * 60 + sm;
+                        const endMins = eh * 60 + em;
+
+                        if (startMins > nowMins) {
+                            events.push({ relay: entry.relay, state: 'on', mins: startMins, time: entry.start_time.slice(0, 5) });
+                        }
+                        if (endMins > nowMins) {
+                            events.push({ relay: entry.relay, state: 'off', mins: endMins, time: entry.end_time.slice(0, 5) });
+                        }
+                    }
+
+                    events.sort((a, b) => a.mins - b.mins);
+
+                    // Show 1 next action per relay
+                    const result = [];
+                    let foundHeating = false, foundFiltering = false;
+                    for (const e of events) {
+                        if (e.relay === 'heating' && foundHeating) continue;
+                        if (e.relay === 'filtering' && foundFiltering) continue;
+                        const [h, m] = e.time.split(':').map(Number);
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        const h12 = h % 12 || 12;
+                        e.time = m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, '0')}${ampm}`;
+                        result.push(e);
+                        if (e.relay === 'heating') foundHeating = true;
+                        if (e.relay === 'filtering') foundFiltering = true;
+                        if (foundHeating && foundFiltering) break;
+                    }
+                    this.nextActions = result;
+                },
+
+                // --- Bypass ---
+                get todayDate() {
+                    return new Date().toISOString().split('T')[0];
+                },
+
+                openBypassModal(relay, state) {
+                    this.bypassRelay = relay;
+                    this.bypassState = state;
+                    this.bypassDate = this.todayDate;
+                    this.bypassTime = '';
+                    this.showBypassModal = true;
+                },
+
+                closeBypassModal() {
+                    this.showBypassModal = false;
+                    this.bypassRelay = '';
+                    this.bypassState = '';
+                    this.bypassDate = '';
+                    this.bypassTime = '';
+                },
+
+                setBypassQuick(hours) {
+                    const until = new Date(Date.now() + hours * 3600000);
+                    this.bypassDate = until.toISOString().split('T')[0];
+                    const hh = String(until.getHours()).padStart(2, '0');
+                    const mm = String(until.getMinutes()).padStart(2, '0');
+                    this.bypassTime = `${hh}:${mm}`;
+                    this.confirmBypass();
+                },
+
+                async confirmBypass() {
+                    if (!this.bypassDate || !this.bypassTime) return;
+                    const until = `${this.bypassDate} ${this.bypassTime}:00`;
+                    try {
+                        const response = await fetch('/relay/bypass', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({
+                                relay: this.bypassRelay,
+                                state: this.bypassState,
+                                until: until
+                            })
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        this.showToast(`Bypass ${this.bypassState.toUpperCase()} ${this.bypassRelay} until ${this.bypassTime}`, 'success');
+                        this.closeBypassModal();
+                        await this.checkStatus();
+                        await this.loadBypasses();
+                    } catch (error) {
+                        this.showToast('Error setting bypass', 'error');
+                        console.error('Error:', error);
+                    }
+                },
+
+                async clearBypass(relay) {
+                    try {
+                        const response = await fetch('/relay/clear_bypass', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ relay: relay })
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        this.showToast(`Bypass cleared for ${relay}`, 'info');
+                        await this.loadBypasses();
+                    } catch (error) {
+                        this.showToast('Error clearing bypass', 'error');
+                    }
+                },
+
+                async loadBypasses() {
+                    try {
+                        const response = await fetch('/api/bypasses', {
+                            method: 'GET',
+                            headers: { 'Authorization': 'Bearer ' + this.apiToken }
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        const data = await response.json();
+                        this.activeBypasses = (data.bypasses || []).map(bp => {
+                            const d = new Date(bp.until.replace(' ', 'T'));
+                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const h = d.getHours();
+                            const m = d.getMinutes();
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            const h12 = h % 12 || 12;
+                            const timeStr = m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, '0')}${ampm}`;
+                            const today = new Date();
+                            const isToday = d.toDateString() === today.toDateString();
+                            const display = isToday ? timeStr : `${timeStr} ${days[d.getDay()]}`;
+                            return { ...bp, display };
+                        });
+                    } catch (error) {
+                        console.error('Error loading bypasses:', error);
+                    }
+                },
+
+                // --- Schedule helpers ---
+                getHoursByDay(relay, day) {
+                    const hours = relay === 'heating' ? this.heatingHours : this.filteringHours;
+                    return hours.filter(h => h.day === day);
+                },
+
+                getCurrentHours() {
+                    return this.scheduleTab === 'heating' ? this.heatingHours : this.filteringHours;
+                },
+
+                heatingHoursByDay(day) {
+                    return this.heatingHours.filter(h => h.day === day);
+                },
+
+                filteringHoursByDay(day) {
+                    return this.filteringHours.filter(h => h.day === day);
+                },
+
+                // --- Edit ---
+                startEdit(hour) {
+                    this.editingId = hour.id;
+                    this.editStart = hour.start_time;
+                    this.editEnd = hour.end_time;
+                },
+
+                cancelEdit() {
+                    this.editingId = null;
+                    this.editStart = '';
+                    this.editEnd = '';
+                },
+
+                async saveEdit(hourId) {
+                    if (!this.editStart || !this.editEnd) return;
+                    try {
+                        const response = await fetch('/update_hours', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({
+                                hour_id: hourId,
+                                start_time: this.editStart,
+                                end_time: this.editEnd
+                            })
+                        });
+                        if (!response.ok) throw new Error('Failed to update');
+                        this.cancelEdit();
+                        await this.loadHours();
+                        this.showToast('Schedule updated', 'success');
+                    } catch (error) {
+                        this.showToast('Error updating schedule', 'error');
+                        console.error('Error:', error);
+                    }
+                },
+
+                // --- Duplicate ---
+                openDuplicate(hour) {
+                    this.dayPickerMode = 'duplicate';
+                    this.dayPickerRelay = hour.relay;
+                    this.dayPickerHour = hour;
+                    this.dayPickerTitle = 'Duplicate Entry';
+                    this.dayPickerSubtitle = `${hour.start_time} - ${hour.end_time}`;
+                    this.availableDaysForPicker = this.allDays.filter(d => d !== hour.day);
+                    this.selectedDays = [];
+                    this.showDayPicker = true;
+                },
+
+                openCopyDay(relay, day) {
+                    this.dayPickerMode = 'copyDay';
+                    this.dayPickerRelay = relay;
+                    this.dayPickerSourceDay = day;
+                    this.dayPickerTitle = `Copy ${day}`;
+                    this.dayPickerSubtitle = `Copy all ${relay} entries to:`;
+                    this.availableDaysForPicker = this.allDays.filter(d => d !== day);
+                    this.selectedDays = [];
+                    this.showDayPicker = true;
+                },
+
+                closeDayPicker() {
+                    this.showDayPicker = false;
+                    this.dayPickerMode = null;
+                    this.dayPickerRelay = null;
+                    this.dayPickerSourceDay = null;
+                    this.dayPickerHour = null;
+                    this.selectedDays = [];
+                },
+
+                async confirmDayPicker() {
+                    if (this.selectedDays.length === 0) return;
+                    try {
+                        let entries = [];
+                        if (this.dayPickerMode === 'duplicate') {
+                            for (const day of this.selectedDays) {
+                                entries.push({
+                                    relay: this.dayPickerRelay,
+                                    day: day,
+                                    start_time: this.dayPickerHour.start_time,
+                                    end_time: this.dayPickerHour.end_time
+                                });
+                            }
+                        } else if (this.dayPickerMode === 'copyDay') {
+                            const hours = this.dayPickerRelay === 'heating' ? this.heatingHours : this.filteringHours;
+                            const sourceEntries = hours.filter(h => h.day === this.dayPickerSourceDay);
+                            for (const day of this.selectedDays) {
+                                for (const entry of sourceEntries) {
+                                    entries.push({
+                                        relay: this.dayPickerRelay,
+                                        day: day,
+                                        start_time: entry.start_time,
+                                        end_time: entry.end_time
+                                    });
+                                }
+                            }
+                        }
+
+                        for (const entry of entries) {
+                            const response = await fetch('/add_hours', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + this.apiToken
+                                },
+                                body: JSON.stringify(entry)
+                            });
+                            if (!response.ok) throw new Error('Failed to add');
+                        }
+
+                        this.showToast(`Duplicated to ${this.selectedDays.length} days`, 'success');
+                        this.closeDayPicker();
+                        await this.loadHours();
+                    } catch (error) {
+                        this.showToast('Error duplicating', 'error');
+                        console.error('Error:', error);
+                    }
+                },
+
+                // --- Auth ---
                 async login() {
                     try {
                         const response = await fetch('/login', {
@@ -184,8 +798,10 @@
                     this.checkStatus();
                     this.loadHours();
                     this.loadSpecialDates();
+                    this.loadBypasses();
                     this.initCalendar();
                     setInterval(() => this.checkStatus(), 30000);
+                    setInterval(() => { this.computeNextActions(); this.loadBypasses(); }, 60000);
                 },
 
                 async init() {
@@ -194,7 +810,6 @@
                         if (response.ok) {
                             this.authenticated = true;
                             this.startApp();
-                            return;
                         }
                     } catch (e) {}
                 },
@@ -206,9 +821,11 @@
 
                 updateTime() {
                     const now = new Date();
-                    this.currentTime = `Current Time: ${now.toLocaleString()}`;
+                    const opts = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    this.currentTime = now.toLocaleDateString('en-US', opts);
                 },
 
+                // --- Status ---
                 async checkStatus() {
                     try {
                         const response = await fetch('/api/status', {
@@ -217,15 +834,14 @@
                         });
                         if (!response.ok) throw new Error('Network error');
                         const data = await response.json();
-                        this.statusMessage = `Status: ${data.status} (Last updated: ${data.time})`;
                         this.heatingState = data.heating;
                         this.filteringState = data.filtering;
                     } catch (error) {
-                        this.statusMessage = 'Error connecting to server';
                         console.error('Error:', error);
                     }
                 },
 
+                // --- Relay ---
                 async relayOn(relayName) {
                     try {
                         const response = await fetch('/relay/on', {
@@ -238,18 +854,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.checkStatus();
+                        this.showToast(`${relayName} turned on`, 'success');
                     } catch (error) {
-                        this.statusMessage = `Error turning on ${relayName}`;
-                        console.error('Error:', error);
-                    }
-                },
-
-                async toggleRelay(relayName) {
-                    const currentState = relayName === 'heating' ? this.heatingState : this.filteringState;
-                    if (currentState === 'on') {
-                        await this.relayOff(relayName);
-                    } else {
-                        await this.relayOn(relayName);
+                        this.showToast(`Error turning on ${relayName}`, 'error');
                     }
                 },
 
@@ -265,12 +872,13 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.checkStatus();
+                        this.showToast(`${relayName} turned off`, 'info');
                     } catch (error) {
-                        this.statusMessage = `Error turning off ${relayName}`;
-                        console.error('Error:', error);
+                        this.showToast(`Error turning off ${relayName}`, 'error');
                     }
                 },
 
+                // --- Hours ---
                 async loadHours() {
                     try {
                         const response = await fetch('/hours', {
@@ -286,6 +894,7 @@
                         if (data.hours && Array.isArray(data.hours)) {
                             this.heatingHours = data.hours.filter(h => h.relay === 'heating');
                             this.filteringHours = data.hours.filter(h => h.relay === 'filtering');
+                            this.computeNextActions();
                         }
                     } catch (error) {
                         console.error('Error loading hours:', error);
@@ -303,7 +912,7 @@
                         const endTime = this.$refs[endRef].value;
 
                         if (!day || !startTime || !endTime) {
-                            alert('Please select day, start time and end time');
+                            this.showToast('Please fill all fields', 'error');
                             return;
                         }
 
@@ -324,16 +933,15 @@
                         await this.loadHours();
                         this.$refs[startRef].value = '';
                         this.$refs[endRef].value = '';
-                        this.statusMessage = `Schedule added for ${relayName} on ${day}`;
+                        this.showToast(`Added to ${day}`, 'success');
                     } catch (error) {
-                        this.statusMessage = 'Error adding hours';
-                        console.error('Error:', error);
+                        this.showToast('Error adding schedule', 'error');
                     }
                 },
 
                 async deleteHour(hourId) {
+                    if (!confirm("Delete this schedule entry?")) return;
                     try {
-                        if (!confirm("Delete this schedule entry?")) return;
                         const response = await fetch('/delete_hours', {
                             method: 'POST',
                             headers: {
@@ -344,25 +952,26 @@
                         });
                         if (!response.ok) throw new Error('Failed to delete');
                         await this.loadHours();
-                        this.statusMessage = 'Schedule entry deleted';
+                        this.showToast('Entry deleted', 'info');
                     } catch (error) {
-                        this.statusMessage = 'Error deleting schedule';
-                        console.error('Error:', error);
+                        this.showToast('Error deleting', 'error');
                     }
                 },
 
+                // --- Dates ---
                 async loadSpecialDates() {
                     try {
                         const response = await fetch('/dates', {
                             method: 'GET',
                             headers: { 'Authorization': 'Bearer ' + this.apiToken }
                         });
-                        if (!response.ok) throw new Error('Failed to load dates');
+                        if (!response.ok) throw new Error('Failed');
                         const data = await response.json();
                         if (data.dates && Array.isArray(data.dates)) {
                             this.specialDatesWithIds = data.dates;
                             this.specialDates = data.dates.map(d => d.date);
                             this.updateCalendar();
+                            this.computeNextActions();
                         }
                     } catch (error) {
                         console.error('Error loading special dates:', error);
@@ -408,10 +1017,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.statusMessage = `Special date added: ${dateString}`;
+                        this.showToast(`Holiday added: ${dateString}`, 'success');
                     } catch (error) {
-                        this.statusMessage = 'Error adding special date';
-                        console.error('Error:', error);
+                        this.showToast('Error adding date', 'error');
                     }
                 },
 
@@ -442,10 +1050,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.statusMessage = `Special date deleted: ${dateString}`;
+                        this.showToast(`Holiday removed: ${dateString}`, 'info');
                     } catch (error) {
-                        this.statusMessage = 'Error deleting special date';
-                        console.error('Error:', error);
+                        this.showToast('Error removing date', 'error');
                     }
                 }
             };

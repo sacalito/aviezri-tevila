@@ -12,11 +12,16 @@ python3 main.py
 
 Runs on `http://0.0.0.0:5000`. Must run with `debug=False` to avoid GPIO busy errors from Flask's reloader forking a second process.
 
+## Important Rules
+
+- **NEVER change the GPIO pin assignments** — they are wired to physical hardware
+- **Always run as root user**
+
 ## Hardware
 
 - **Platform**: Raspberry Pi 4
-- **Heating relay**: GPIO 24 (physical pin 18)
-- **Filtering relay**: GPIO 23 (physical pin 16)
+- **Heating relay**: GPIO 24 (physical pin 18) — DO NOT CHANGE
+- **Filtering relay**: GPIO 23 (physical pin 16) — DO NOT CHANGE
 - GPIO numbering: BCM mode (gpiozero default)
 - Relay logic is inverted: `LED.off()` = relay ON, `LED.on()` = relay OFF
 
