@@ -6,6 +6,7 @@ from datetime import datetime
 from database import (
     get_all_hours, add_hours, get_hours_by_relay, delete_hours, update_hours,
     get_all_dates, add_date, delete_date,
+    get_all_erev_jag_dates, add_erev_jag_date, delete_erev_jag_date,
     set_bypass, get_all_bypasses, clear_bypass
 )
 
@@ -113,7 +114,7 @@ def get_hours():
 
         day_order = {
             'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
-            'Friday': 4, 'Saturday': 5, 'Sunday': 6, 'Holiday': 7
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6, 'YomTov': 7, 'ErevJag': 8
         }
         result.sort(key=lambda x: (x['relay'], day_order.get(x['day'], 99), x['start_time']))
 
@@ -309,3 +310,45 @@ def clear_bypass_route():
     except Exception as e:
         logging.error(f'Error clearing bypass: {e}', exc_info=True)
         return {'error': 'Failed to clear bypass'}, 500
+
+# --- Erev Jag dates endpoints ---
+
+@routes.route('/erev_jag_dates', methods=['GET'])
+@require_token
+def get_erev_jag_dates():
+    try:
+        dates = get_all_erev_jag_dates()
+        result = [{'id': d.id, 'date': d.date} for d in dates]
+        return {'dates': result}
+    except Exception as e:
+        logging.error(f'Error fetching erev jag dates: {e}', exc_info=True)
+        return {'error': 'Failed to retrieve erev jag dates'}, 500
+
+@routes.route('/add_erev_jag_date', methods=['POST'])
+@require_token
+def add_erev_jag_date_route():
+    try:
+        data = request.get_json()
+        date_str = data.get('date')
+        if not date_str:
+            return {'error': 'Missing required field (date)'}, 400
+        new_date = add_erev_jag_date(date_str)
+        return {'success': True, 'date': {'id': new_date.id, 'date': new_date.date}}
+    except Exception as e:
+        logging.error(f'Error adding erev jag date: {e}', exc_info=True)
+        return {'error': 'Failed to add erev jag date'}, 500
+
+@routes.route('/delete_erev_jag_date', methods=['POST'])
+@require_token
+def delete_erev_jag_date_route():
+    try:
+        data = request.get_json()
+        date_id = data.get('date_id')
+        result = delete_erev_jag_date(date_id)
+        if result:
+            return {'success': True, 'message': f'Erev Jag date with ID {date_id} deleted'}
+        else:
+            return {'error': f'No erev jag date found with ID {date_id}'}, 404
+    except Exception as e:
+        logging.error(f'Error deleting erev jag date: {e}', exc_info=True)
+        return {'error': 'Failed to delete erev jag date'}, 500

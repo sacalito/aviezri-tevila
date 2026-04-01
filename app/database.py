@@ -14,11 +14,12 @@ def init_db(app):
 
     with app.app_context():
         db.create_all()
+        migrate_holiday_to_yomtov()
 
 class Hours(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     relay = db.Column(db.String(20), nullable=False)  # 'heating' or 'filtering'
-    day = db.Column(db.String(10), nullable=False)     # 'Monday', ..., 'Sunday', 'Holiday'
+    day = db.Column(db.String(10), nullable=False)     # 'Monday', ..., 'Sunday', 'YomTov', 'ErevJag'
     start_time = db.Column(db.String(8), nullable=False)  # 'HH:MM:SS'
     end_time = db.Column(db.String(8), nullable=False)    # 'HH:MM:SS'
 
@@ -31,6 +32,13 @@ class Dates(db.Model):
 
     def __repr__(self):
         return f'<Date {self.date}>'
+
+class ErevJagDates(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.String(10), nullable=False, unique=True)  # 'YYYY-MM-DD'
+
+    def __repr__(self):
+        return f'<ErevJagDate {self.date}>'
 
 class Bypass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -121,3 +129,32 @@ def delete_date(date_id):
         db.session.commit()
         return True
     return False
+
+def add_erev_jag_date(date_str):
+    existing = ErevJagDates.query.filter_by(date=date_str).first()
+    if existing:
+        return existing
+    new_date = ErevJagDates(date=date_str)
+    db.session.add(new_date)
+    db.session.commit()
+    return new_date
+
+def get_all_erev_jag_dates():
+    return ErevJagDates.query.all()
+
+def delete_erev_jag_date(date_id):
+    date = ErevJagDates.query.get(date_id)
+    if date:
+        db.session.delete(date)
+        db.session.commit()
+        return True
+    return False
+
+def migrate_holiday_to_yomtov():
+    """Rename any existing 'Holiday' day entries to 'YomTov'."""
+    rows = Hours.query.filter_by(day='Holiday').all()
+    for row in rows:
+        row.day = 'YomTov'
+    if rows:
+        db.session.commit()
+    return len(rows)

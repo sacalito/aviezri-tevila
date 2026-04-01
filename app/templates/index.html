@@ -411,12 +411,22 @@
             </div>
 
             <!-- Special Dates -->
-            <div class="mb-8">
-                <h2 class="text-xl font-bold mb-4">Special Dates</h2>
+            <h2 class="text-xl font-bold mb-4">Special Dates</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- YomTov Calendar -->
                 <div class="card bg-white border border-gray-100 rounded-2xl">
                     <div class="card-body">
-                        <p class="text-sm opacity-50 mb-3">Click a date to mark it as a holiday. Click a highlighted date to remove it.</p>
-                        <div id="calendar" x-ref="calendar"></div>
+                        <h3 class="font-bold text-lg">Yom Tov</h3>
+                        <p class="text-sm opacity-50 mb-3">Click to add/remove Yom Tov dates.</p>
+                        <div x-ref="calendar"></div>
+                    </div>
+                </div>
+                <!-- Erev Jag Calendar -->
+                <div class="card bg-white border border-gray-100 rounded-2xl">
+                    <div class="card-body">
+                        <h3 class="font-bold text-lg">Erev Jag</h3>
+                        <p class="text-sm opacity-50 mb-3">Click to add/remove Erev Jag dates.</p>
+                        <div x-ref="erevJagCalendar"></div>
                     </div>
                 </div>
             </div>
@@ -442,10 +452,13 @@
                 filteringHours: [],
                 specialDates: [],
                 specialDatesWithIds: [],
+                erevJagDates: [],
+                erevJagDatesWithIds: [],
+                erevJagCalendar: null,
                 apiToken: 'FeGHtFHiQmukbZXB4ygUZiJPqeiKD6318Q0xZjzbAKT2L1MC72IB8ed2hIZ9J6jX',
                 calendar: null,
 
-                allDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Holiday'],
+                allDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'YomTov', 'ErevJag'],
                 scheduleTab: 'heating',
 
                 editingId: null,
@@ -494,8 +507,9 @@
                     const nowMins = now.getHours() * 60 + now.getMinutes();
                     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                     const todayStr = now.toISOString().split('T')[0];
-                    const isHoliday = this.specialDates.includes(todayStr);
-                    const todayDay = isHoliday ? 'Holiday' : days[now.getDay()];
+                    const isYomTov = this.specialDates.includes(todayStr);
+                    const isErevJag = this.erevJagDates.includes(todayStr);
+                    const todayDay = isYomTov ? 'YomTov' : isErevJag ? 'ErevJag' : days[now.getDay()];
 
                     const allHours = [...this.heatingHours, ...this.filteringHours];
                     const todayEntries = allHours.filter(h => h.day === todayDay);
@@ -798,8 +812,10 @@
                     this.checkStatus();
                     this.loadHours();
                     this.loadSpecialDates();
+                    this.loadErevJagDates();
                     this.loadBypasses();
                     this.initCalendar();
+                    this.initErevJagCalendar();
                     setInterval(() => this.checkStatus(), 30000);
                     setInterval(() => { this.computeNextActions(); this.loadBypasses(); }, 60000);
                 },
@@ -1017,7 +1033,7 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.showToast(`Holiday added: ${dateString}`, 'success');
+                        this.showToast(`Yom Tov added: ${dateString}`, 'success');
                     } catch (error) {
                         this.showToast('Error adding date', 'error');
                     }
@@ -1050,7 +1066,105 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.showToast(`Holiday removed: ${dateString}`, 'info');
+                        this.showToast(`Yom Tov removed: ${dateString}`, 'info');
+                    } catch (error) {
+                        this.showToast('Error removing date', 'error');
+                    }
+                },
+
+                // --- Erev Jag Dates ---
+                async loadErevJagDates() {
+                    try {
+                        const response = await fetch('/erev_jag_dates', {
+                            method: 'GET',
+                            headers: { 'Authorization': 'Bearer ' + this.apiToken }
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        const data = await response.json();
+                        if (data.dates && Array.isArray(data.dates)) {
+                            this.erevJagDatesWithIds = data.dates;
+                            this.erevJagDates = data.dates.map(d => d.date);
+                            this.updateErevJagCalendar();
+                            this.computeNextActions();
+                        }
+                    } catch (error) {
+                        console.error('Error loading erev jag dates:', error);
+                    }
+                },
+
+                initErevJagCalendar() {
+                    const self = this;
+                    this.$nextTick(() => {
+                        this.erevJagCalendar = flatpickr(this.$refs.erevJagCalendar, {
+                            inline: true,
+                            mode: "multiple",
+                            dateFormat: "Y-m-d",
+                            disable: [],
+                            onChange(selectedDates, dateStr, instance) {
+                                if (dateStr && !self.erevJagDates.includes(dateStr)) {
+                                    self.addErevJagDate(dateStr);
+                                }
+                                instance.clear();
+                            },
+                            onDayCreate(dObj, dStr, fp, dayElem) {
+                                const dateString = dayElem.dateObj.toISOString().split('T')[0];
+                                if (self.erevJagDates.includes(dateString)) {
+                                    dayElem.addEventListener('click', () => {
+                                        self.deleteErevJagDate(dateString);
+                                    });
+                                }
+                            }
+                        });
+                        this.updateErevJagCalendar();
+                    });
+                },
+
+                async addErevJagDate(dateString) {
+                    try {
+                        const response = await fetch('/add_erev_jag_date', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ date: dateString })
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        await this.loadErevJagDates();
+                        this.showToast(`Erev Jag added: ${dateString}`, 'success');
+                    } catch (error) {
+                        this.showToast('Error adding date', 'error');
+                    }
+                },
+
+                updateErevJagCalendar() {
+                    if (this.erevJagCalendar) {
+                        if (this.erevJagDates.length > 0) {
+                            this.erevJagCalendar.set('disable', this.erevJagDates.map(date => ({
+                                from: date, to: date
+                            })));
+                        } else {
+                            this.erevJagCalendar.set('disable', []);
+                        }
+                        this.erevJagCalendar.redraw();
+                    }
+                },
+
+                async deleteErevJagDate(dateString) {
+                    try {
+                        const d = this.erevJagDatesWithIds.find(d => d.date === dateString);
+                        if (!d) return;
+                        const response = await fetch('/delete_erev_jag_date', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.apiToken
+                            },
+                            body: JSON.stringify({ date_id: d.id })
+                        });
+                        if (!response.ok) throw new Error('Failed');
+                        await this.loadErevJagDates();
+                        this.showToast(`Erev Jag removed: ${dateString}`, 'info');
                     } catch (error) {
                         this.showToast('Error removing date', 'error');
                     }

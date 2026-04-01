@@ -1,7 +1,7 @@
 from flask import Flask
 from routes import routes
 from log_config import setup_logging
-from database import init_db, get_all_dates, get_hours_by_relay_and_day, get_bypass, clear_bypass
+from database import init_db, get_all_dates, get_all_erev_jag_dates, get_hours_by_relay_and_day, get_bypass, clear_bypass
 from relayControl import turn_on, turn_off, get_relay_state, RELAY_PINS
 import datetime
 import atexit
@@ -43,12 +43,16 @@ def check_relay_schedule(relay_name):
             logger.info(f"[{relay_name}] Bypass expired, clearing")
             clear_bypass(relay_name)
 
-    # Check if today is a special date
-    special_dates = get_all_dates()
-    is_special_date = any(d.date == current_date for d in special_dates)
+    # Check if today is a special date (YomTov takes precedence over ErevJag)
+    yomtov_dates = get_all_dates()
+    erev_jag_dates = get_all_erev_jag_dates()
+    is_yomtov = any(d.date == current_date for d in yomtov_dates)
+    is_erev_jag = any(d.date == current_date for d in erev_jag_dates)
 
-    if is_special_date:
-        current_day = 'Holiday'
+    if is_yomtov:
+        current_day = 'YomTov'
+    elif is_erev_jag:
+        current_day = 'ErevJag'
 
     # Get schedule entries for this relay and day
     hours = get_hours_by_relay_and_day(relay_name, current_day)
