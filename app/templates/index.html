@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="corporate">
+<html lang="es" data-theme="corporate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tevila Control</title>
+    <title>Control de Tevila</title>
 
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
@@ -98,14 +98,14 @@
                         <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                         </div>
-                        <h2 class="text-2xl font-bold">Tevila Control</h2>
-                        <p class="text-sm opacity-50 mt-1">Enter password to continue</p>
+                        <h2 class="text-2xl font-bold">Control de Tevila</h2>
+                        <p class="text-sm opacity-50 mt-1">Ingrese la contrase&ntilde;a para continuar</p>
                     </div>
                     <div class="w-full space-y-3">
-                        <input type="password" x-model="passwordInput" @keyup.enter="login()" placeholder="Password" class="input input-bordered w-full focus:input-primary" />
-                        <button @click="login()" class="btn btn-primary w-full">Login</button>
+                        <input type="password" x-model="passwordInput" @keyup.enter="login()" placeholder="Contrase&ntilde;a" class="input input-bordered w-full focus:input-primary" />
+                        <button @click="login()" class="btn btn-primary w-full">Iniciar sesi&oacute;n</button>
                     </div>
-                    <p x-show="loginError" class="text-error text-sm" x-cloak>Incorrect password</p>
+                    <p x-show="loginError" class="text-error text-sm" x-cloak>Contrase&ntilde;a incorrecta</p>
                 </div>
             </div>
         </div>
@@ -118,12 +118,12 @@
             <!-- Header -->
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold">Tevila Control</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold">Control de Tevila</h1>
                     <p class="text-sm opacity-40 mt-0.5" x-text="currentTime"></p>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full bg-success animate-pulse"></div>
-                    <span class="text-sm opacity-60">Online</span>
+                    <span class="text-sm opacity-60">En l&iacute;nea</span>
                 </div>
             </div>
 
@@ -133,9 +133,9 @@
                     <div class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border" :class="bp.relay === 'heating' ? 'bg-orange-50 text-orange-800 border-orange-200' : 'bg-cyan-50 text-cyan-800 border-cyan-200'">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
                         <span>
-                            BYPASS <span class="uppercase" x-text="bp.state"></span>
-                            <span class="capitalize" x-text="bp.relay"></span>
-                            <span class="opacity-60">until</span>
+                            BYPASS <span class="uppercase" x-text="bp.state === 'on' ? 'ENCENDIDO' : 'APAGADO'"></span>
+                            <span class="capitalize" x-text="relayLabel(bp.relay)"></span>
+                            <span class="opacity-60">hasta</span>
                             <span x-text="bp.display"></span>
                         </span>
                         <button @click="clearBypass(bp.relay)" class="btn btn-ghost btn-xs ml-1 opacity-50 hover:opacity-100">&times;</button>
@@ -150,9 +150,9 @@
                         <svg x-show="action.relay === 'heating'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
                         <svg x-show="action.relay === 'filtering'" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z" /></svg>
                         <span>
-                            <span class="font-semibold capitalize" x-text="action.relay"></span>
-                            <span x-text="action.state"></span>
-                            <span class="opacity-60">at</span>
+                            <span class="font-semibold capitalize" x-text="relayLabel(action.relay)"></span>
+                            <span x-text="action.state === 'on' ? 'encender' : 'apagar'"></span>
+                            <span class="opacity-60">a las</span>
                             <span class="font-medium" x-text="action.time"></span>
                         </span>
                     </div>
@@ -170,7 +170,7 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :class="heatingState === 'on' ? 'text-orange-500' : 'opacity-30'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-bold text-lg">Heating</h3>
+                                    <h3 class="font-bold text-lg">Calentamiento</h3>
                                     <p class="text-xs opacity-50">GPIO 24</p>
                                 </div>
                             </div>
@@ -194,7 +194,7 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :class="filteringState === 'on' ? 'text-cyan-500' : 'opacity-30'" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z" /></svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-bold text-lg">Filtering</h3>
+                                    <h3 class="font-bold text-lg">Filtrado</h3>
                                     <p class="text-xs opacity-50">GPIO 23</p>
                                 </div>
                             </div>
@@ -211,21 +211,21 @@
             </div>
 
             <!-- Schedules - Two Column -->
-            <h2 class="text-xl font-bold mb-4">Schedules</h2>
+            <h2 class="text-xl font-bold mb-4">Horarios</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
                 <!-- Heating Schedule Column -->
                 <div>
                     <div class="flex items-center gap-2 mb-3">
                         <div class="w-2 h-5 rounded-full bg-orange-400"></div>
-                        <h3 class="font-bold text-lg">Heating</h3>
+                        <h3 class="font-bold text-lg">Calentamiento</h3>
                     </div>
 
                     <!-- Add form -->
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-3 mb-3">
                         <select x-ref="heatingDaySelect" class="select select-bordered select-sm flex-1 min-w-[100px]">
                             <template x-for="d in allDays" :key="'hs-'+d">
-                                <option :value="d" x-text="d"></option>
+                                <option :value="d" x-text="dayLabel(d)"></option>
                             </template>
                         </select>
                         <input type="time" x-ref="heatingStartTime" class="input input-bordered input-sm w-28" />
@@ -241,12 +241,12 @@
                             <div x-show="heatingHoursByDay(day).length > 0" class="border border-gray-100 rounded-xl overflow-hidden">
                                 <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50/80">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-semibold text-sm" x-text="day"></span>
-                                        <span class="text-xs text-gray-400" x-text="heatingHoursByDay(day).length + ' entries'"></span>
+                                        <span class="font-semibold text-sm" x-text="dayLabel(day)"></span>
+                                        <span class="text-xs text-gray-400" x-text="heatingHoursByDay(day).length + ' entradas'"></span>
                                     </div>
                                     <button @click="openCopyDay('heating', day)" class="btn btn-ghost btn-xs gap-1 text-gray-400 hover:text-gray-600">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                        Copy
+                                        Copiar
                                     </button>
                                 </div>
                                 <ul>
@@ -265,11 +265,11 @@
                                             </div>
                                             <div x-show="editingId === hour.id" class="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-amber-50/50" x-cloak>
                                                 <input type="time" class="input input-bordered input-sm w-28" x-model="editStart" />
-                                                <span class="text-gray-300">to</span>
+                                                <span class="text-gray-300">a</span>
                                                 <input type="time" class="input input-bordered input-sm w-28" x-model="editEnd" />
                                                 <div class="flex gap-1 ml-auto">
-                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Save</button>
-                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Guardar</button>
+                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancelar</button>
                                                 </div>
                                             </div>
                                         </li>
@@ -277,7 +277,7 @@
                                 </ul>
                             </div>
                         </template>
-                        <p x-show="heatingHours.length === 0" class="text-sm text-gray-300 text-center py-8">No heating schedule</p>
+                        <p x-show="heatingHours.length === 0" class="text-sm text-gray-300 text-center py-8">Sin horario de calentamiento</p>
                     </div>
                 </div>
 
@@ -285,14 +285,14 @@
                 <div>
                     <div class="flex items-center gap-2 mb-3">
                         <div class="w-2 h-5 rounded-full bg-cyan-400"></div>
-                        <h3 class="font-bold text-lg">Filtering</h3>
+                        <h3 class="font-bold text-lg">Filtrado</h3>
                     </div>
 
                     <!-- Add form -->
                     <div class="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-3 mb-3">
                         <select x-ref="filteringDaySelect" class="select select-bordered select-sm flex-1 min-w-[100px]">
                             <template x-for="d in allDays" :key="'fs-'+d">
-                                <option :value="d" x-text="d"></option>
+                                <option :value="d" x-text="dayLabel(d)"></option>
                             </template>
                         </select>
                         <input type="time" x-ref="filteringStartTime" class="input input-bordered input-sm w-28" />
@@ -308,12 +308,12 @@
                             <div x-show="filteringHoursByDay(day).length > 0" class="border border-gray-100 rounded-xl overflow-hidden">
                                 <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50/80">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-semibold text-sm" x-text="day"></span>
-                                        <span class="text-xs text-gray-400" x-text="filteringHoursByDay(day).length + ' entries'"></span>
+                                        <span class="font-semibold text-sm" x-text="dayLabel(day)"></span>
+                                        <span class="text-xs text-gray-400" x-text="filteringHoursByDay(day).length + ' entradas'"></span>
                                     </div>
                                     <button @click="openCopyDay('filtering', day)" class="btn btn-ghost btn-xs gap-1 text-gray-400 hover:text-gray-600">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                        Copy
+                                        Copiar
                                     </button>
                                 </div>
                                 <ul>
@@ -332,11 +332,11 @@
                                             </div>
                                             <div x-show="editingId === hour.id" class="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-cyan-50/50" x-cloak>
                                                 <input type="time" class="input input-bordered input-sm w-28" x-model="editStart" />
-                                                <span class="text-gray-300">to</span>
+                                                <span class="text-gray-300">a</span>
                                                 <input type="time" class="input input-bordered input-sm w-28" x-model="editEnd" />
                                                 <div class="flex gap-1 ml-auto">
-                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Save</button>
-                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+                                                    <button @click="saveEdit(hour.id)" class="btn btn-success btn-sm btn-outline">Guardar</button>
+                                                    <button @click="cancelEdit()" class="btn btn-ghost btn-sm">Cancelar</button>
                                                 </div>
                                             </div>
                                         </li>
@@ -344,7 +344,7 @@
                                 </ul>
                             </div>
                         </template>
-                        <p x-show="filteringHours.length === 0" class="text-sm text-gray-300 text-center py-8">No filtering schedule</p>
+                        <p x-show="filteringHours.length === 0" class="text-sm text-gray-300 text-center py-8">Sin horario de filtrado</p>
                     </div>
                 </div>
 
@@ -355,29 +355,29 @@
                 <div class="card bg-white w-80 shadow-2xl border border-gray-100 rounded-2xl" x-transition>
                     <div class="card-body gap-4">
                         <div>
-                            <h3 class="font-bold text-lg">Bypass <span class="capitalize" x-text="bypassRelay"></span></h3>
+                            <h3 class="font-bold text-lg">Bypass <span class="capitalize" x-text="relayLabel(bypassRelay)"></span></h3>
                             <p class="text-sm opacity-50 mt-0.5">
-                                Turn <span class="uppercase font-semibold" x-text="bypassState"></span> until:
+                                <span x-text="bypassState === 'on' ? 'Encender' : 'Apagar'"></span> hasta:
                             </p>
                         </div>
                         <!-- Quick options -->
                         <div class="grid grid-cols-2 gap-2">
-                            <button @click="setBypassQuick(1)" class="btn btn-sm btn-outline">1 hour</button>
-                            <button @click="setBypassQuick(2)" class="btn btn-sm btn-outline">2 hours</button>
-                            <button @click="setBypassQuick(4)" class="btn btn-sm btn-outline">4 hours</button>
-                            <button @click="setBypassQuick(8)" class="btn btn-sm btn-outline">8 hours</button>
-                            <button @click="setBypassQuick(12)" class="btn btn-sm btn-outline">12 hours</button>
-                            <button @click="setBypassQuick(24)" class="btn btn-sm btn-outline">24 hours</button>
+                            <button @click="setBypassQuick(1)" class="btn btn-sm btn-outline">1 hora</button>
+                            <button @click="setBypassQuick(2)" class="btn btn-sm btn-outline">2 horas</button>
+                            <button @click="setBypassQuick(4)" class="btn btn-sm btn-outline">4 horas</button>
+                            <button @click="setBypassQuick(8)" class="btn btn-sm btn-outline">8 horas</button>
+                            <button @click="setBypassQuick(12)" class="btn btn-sm btn-outline">12 horas</button>
+                            <button @click="setBypassQuick(24)" class="btn btn-sm btn-outline">24 horas</button>
                         </div>
                         <!-- Custom -->
-                        <div class="divider text-xs opacity-40 my-0">or pick a time</div>
+                        <div class="divider text-xs opacity-40 my-0">o elegir una hora</div>
                         <div class="flex gap-2">
                             <input type="date" class="input input-bordered input-sm flex-1" x-model="bypassDate" :min="todayDate" />
                             <input type="time" class="input input-bordered input-sm w-28" x-model="bypassTime" />
                         </div>
                         <div class="flex gap-2 justify-end pt-1">
-                            <button @click="closeBypassModal()" class="btn btn-ghost btn-sm">Cancel</button>
-                            <button @click="confirmBypass()" class="btn btn-primary btn-sm" :disabled="!bypassDate || !bypassTime">Set Bypass</button>
+                            <button @click="closeBypassModal()" class="btn btn-ghost btn-sm">Cancelar</button>
+                            <button @click="confirmBypass()" class="btn btn-primary btn-sm" :disabled="!bypassDate || !bypassTime">Activar Bypass</button>
                         </div>
                     </div>
                 </div>
@@ -395,14 +395,14 @@
                             <template x-for="d in availableDaysForPicker" :key="d">
                                 <label class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-base-200 cursor-pointer transition-colors">
                                     <input type="checkbox" :value="d" x-model="selectedDays" class="checkbox checkbox-sm checkbox-primary" />
-                                    <span class="text-sm font-medium" x-text="d"></span>
+                                    <span class="text-sm font-medium" x-text="dayLabel(d)"></span>
                                 </label>
                             </template>
                         </div>
                         <div class="flex gap-2 justify-end pt-2">
-                            <button @click="closeDayPicker()" class="btn btn-ghost btn-sm">Cancel</button>
+                            <button @click="closeDayPicker()" class="btn btn-ghost btn-sm">Cancelar</button>
                             <button @click="confirmDayPicker()" class="btn btn-primary btn-sm" :disabled="selectedDays.length === 0">
-                                Duplicate
+                                Duplicar
                                 <span x-show="selectedDays.length > 0" class="badge badge-sm" x-text="selectedDays.length"></span>
                             </button>
                         </div>
@@ -411,13 +411,13 @@
             </div>
 
             <!-- Special Dates -->
-            <h2 class="text-xl font-bold mb-4">Special Dates</h2>
+            <h2 class="text-xl font-bold mb-4">Fechas Especiales</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <!-- YomTov Calendar -->
                 <div class="card bg-white border border-gray-100 rounded-2xl">
                     <div class="card-body">
                         <h3 class="font-bold text-lg">Yom Tov</h3>
-                        <p class="text-sm opacity-50 mb-3">Click to add/remove Yom Tov dates.</p>
+                        <p class="text-sm opacity-50 mb-3">Haga clic para agregar/eliminar fechas de Yom Tov.</p>
                         <div x-ref="calendar"></div>
                     </div>
                 </div>
@@ -425,7 +425,7 @@
                 <div class="card bg-white border border-gray-100 rounded-2xl">
                     <div class="card-body">
                         <h3 class="font-bold text-lg">Erev Jag</h3>
-                        <p class="text-sm opacity-50 mb-3">Click to add/remove Erev Jag dates.</p>
+                        <p class="text-sm opacity-50 mb-3">Haga clic para agregar/eliminar fechas de Erev Jag.</p>
                         <div x-ref="erevJagCalendar"></div>
                     </div>
                 </div>
@@ -433,7 +433,7 @@
 
             <!-- Footer -->
             <footer class="text-center text-xs opacity-30 pb-8">
-                Tevila Control System
+                Sistema de Control de Tevila
             </footer>
 
         </div>
@@ -487,6 +487,17 @@
 
                 toasts: [],
                 toastId: 0,
+
+                dayLabels: {
+                    'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Mi\u00e9rcoles',
+                    'Thursday': 'Jueves', 'Friday': 'Viernes', 'Saturday': 'S\u00e1bado',
+                    'Sunday': 'Domingo', 'YomTov': 'Yom Tov', 'ErevJag': 'Erev Jag', 'Holiday': 'Festivo'
+                },
+
+                relayLabels: { 'heating': 'Calentamiento', 'filtering': 'Filtrado' },
+
+                dayLabel(d) { return this.dayLabels[d] || d; },
+                relayLabel(r) { return this.relayLabels[r] || r; },
 
                 // --- Toast ---
                 showToast(message, type = 'info') {
@@ -596,12 +607,12 @@
                             })
                         });
                         if (!response.ok) throw new Error('Failed');
-                        this.showToast(`Bypass ${this.bypassState.toUpperCase()} ${this.bypassRelay} until ${this.bypassTime}`, 'success');
+                        this.showToast(`Bypass ${this.bypassState === 'on' ? 'ENCENDIDO' : 'APAGADO'} ${this.relayLabel(this.bypassRelay)} hasta ${this.bypassTime}`, 'success');
                         this.closeBypassModal();
                         await this.checkStatus();
                         await this.loadBypasses();
                     } catch (error) {
-                        this.showToast('Error setting bypass', 'error');
+                        this.showToast('Error al activar bypass', 'error');
                         console.error('Error:', error);
                     }
                 },
@@ -617,10 +628,10 @@
                             body: JSON.stringify({ relay: relay })
                         });
                         if (!response.ok) throw new Error('Failed');
-                        this.showToast(`Bypass cleared for ${relay}`, 'info');
+                        this.showToast(`Bypass eliminado para ${this.relayLabel(relay)}`, 'info');
                         await this.loadBypasses();
                     } catch (error) {
-                        this.showToast('Error clearing bypass', 'error');
+                        this.showToast('Error al eliminar bypass', 'error');
                     }
                 },
 
@@ -634,7 +645,7 @@
                         const data = await response.json();
                         this.activeBypasses = (data.bypasses || []).map(bp => {
                             const d = new Date(bp.until.replace(' ', 'T'));
-                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const days = ['Dom', 'Lun', 'Mar', 'Mi\u00e9', 'Jue', 'Vie', 'S\u00e1b'];
                             const h = d.getHours();
                             const m = d.getMinutes();
                             const ampm = h >= 12 ? 'PM' : 'AM';
@@ -699,9 +710,9 @@
                         if (!response.ok) throw new Error('Failed to update');
                         this.cancelEdit();
                         await this.loadHours();
-                        this.showToast('Schedule updated', 'success');
+                        this.showToast('Horario actualizado', 'success');
                     } catch (error) {
-                        this.showToast('Error updating schedule', 'error');
+                        this.showToast('Error al actualizar horario', 'error');
                         console.error('Error:', error);
                     }
                 },
@@ -711,7 +722,7 @@
                     this.dayPickerMode = 'duplicate';
                     this.dayPickerRelay = hour.relay;
                     this.dayPickerHour = hour;
-                    this.dayPickerTitle = 'Duplicate Entry';
+                    this.dayPickerTitle = 'Duplicar Entrada';
                     this.dayPickerSubtitle = `${hour.start_time} - ${hour.end_time}`;
                     this.availableDaysForPicker = this.allDays.filter(d => d !== hour.day);
                     this.selectedDays = [];
@@ -722,8 +733,8 @@
                     this.dayPickerMode = 'copyDay';
                     this.dayPickerRelay = relay;
                     this.dayPickerSourceDay = day;
-                    this.dayPickerTitle = `Copy ${day}`;
-                    this.dayPickerSubtitle = `Copy all ${relay} entries to:`;
+                    this.dayPickerTitle = `Copiar ${this.dayLabel(day)}`;
+                    this.dayPickerSubtitle = `Copiar todas las entradas de ${this.relayLabel(relay)} a:`;
                     this.availableDaysForPicker = this.allDays.filter(d => d !== day);
                     this.selectedDays = [];
                     this.showDayPicker = true;
@@ -778,11 +789,11 @@
                             if (!response.ok) throw new Error('Failed to add');
                         }
 
-                        this.showToast(`Duplicated to ${this.selectedDays.length} days`, 'success');
+                        this.showToast(`Duplicado a ${this.selectedDays.length} d\u00edas`, 'success');
                         this.closeDayPicker();
                         await this.loadHours();
                     } catch (error) {
-                        this.showToast('Error duplicating', 'error');
+                        this.showToast('Error al duplicar', 'error');
                         console.error('Error:', error);
                     }
                 },
@@ -838,7 +849,7 @@
                 updateTime() {
                     const now = new Date();
                     const opts = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-                    this.currentTime = now.toLocaleDateString('en-US', opts);
+                    this.currentTime = now.toLocaleDateString('es-ES', opts);
                 },
 
                 // --- Status ---
@@ -870,9 +881,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.checkStatus();
-                        this.showToast(`${relayName} turned on`, 'success');
+                        this.showToast(`${this.relayLabel(relayName)} encendido`, 'success');
                     } catch (error) {
-                        this.showToast(`Error turning on ${relayName}`, 'error');
+                        this.showToast(`Error al encender ${this.relayLabel(relayName)}`, 'error');
                     }
                 },
 
@@ -888,9 +899,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.checkStatus();
-                        this.showToast(`${relayName} turned off`, 'info');
+                        this.showToast(`${this.relayLabel(relayName)} apagado`, 'info');
                     } catch (error) {
-                        this.showToast(`Error turning off ${relayName}`, 'error');
+                        this.showToast(`Error al apagar ${this.relayLabel(relayName)}`, 'error');
                     }
                 },
 
@@ -928,7 +939,7 @@
                         const endTime = this.$refs[endRef].value;
 
                         if (!day || !startTime || !endTime) {
-                            this.showToast('Please fill all fields', 'error');
+                            this.showToast('Por favor complete todos los campos', 'error');
                             return;
                         }
 
@@ -949,14 +960,14 @@
                         await this.loadHours();
                         this.$refs[startRef].value = '';
                         this.$refs[endRef].value = '';
-                        this.showToast(`Added to ${day}`, 'success');
+                        this.showToast(`Agregado a ${this.dayLabel(day)}`, 'success');
                     } catch (error) {
-                        this.showToast('Error adding schedule', 'error');
+                        this.showToast('Error al agregar horario', 'error');
                     }
                 },
 
                 async deleteHour(hourId) {
-                    if (!confirm("Delete this schedule entry?")) return;
+                    if (!confirm("\u00bfEliminar esta entrada de horario?")) return;
                     try {
                         const response = await fetch('/delete_hours', {
                             method: 'POST',
@@ -968,9 +979,9 @@
                         });
                         if (!response.ok) throw new Error('Failed to delete');
                         await this.loadHours();
-                        this.showToast('Entry deleted', 'info');
+                        this.showToast('Entrada eliminada', 'info');
                     } catch (error) {
-                        this.showToast('Error deleting', 'error');
+                        this.showToast('Error al eliminar', 'error');
                     }
                 },
 
@@ -1033,9 +1044,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.showToast(`Yom Tov added: ${dateString}`, 'success');
+                        this.showToast(`Yom Tov agregado: ${dateString}`, 'success');
                     } catch (error) {
-                        this.showToast('Error adding date', 'error');
+                        this.showToast('Error al agregar fecha', 'error');
                     }
                 },
 
@@ -1066,9 +1077,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadSpecialDates();
-                        this.showToast(`Yom Tov removed: ${dateString}`, 'info');
+                        this.showToast(`Yom Tov eliminado: ${dateString}`, 'info');
                     } catch (error) {
-                        this.showToast('Error removing date', 'error');
+                        this.showToast('Error al eliminar fecha', 'error');
                     }
                 },
 
@@ -1131,9 +1142,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadErevJagDates();
-                        this.showToast(`Erev Jag added: ${dateString}`, 'success');
+                        this.showToast(`Erev Jag agregado: ${dateString}`, 'success');
                     } catch (error) {
-                        this.showToast('Error adding date', 'error');
+                        this.showToast('Error al agregar fecha', 'error');
                     }
                 },
 
@@ -1164,9 +1175,9 @@
                         });
                         if (!response.ok) throw new Error('Failed');
                         await this.loadErevJagDates();
-                        this.showToast(`Erev Jag removed: ${dateString}`, 'info');
+                        this.showToast(`Erev Jag eliminado: ${dateString}`, 'info');
                     } catch (error) {
-                        this.showToast('Error removing date', 'error');
+                        this.showToast('Error al eliminar fecha', 'error');
                     }
                 }
             };
